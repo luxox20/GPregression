@@ -2,7 +2,7 @@ rm(list=ls())
 source("GP.R")
 library("numDeriv")
 n=500
-p=20
+p=4
 X=matrix(rnorm(n*p),ncol=p)
 beta=2^(0:(1-p))
 alpha=3
