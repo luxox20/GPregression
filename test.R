@@ -1,6 +1,6 @@
 rm(list=ls())
-setwd("/Users/negativland/Google Drive/NIR wood classification/code")
 source("GP.R")
+library("numDeriv")
 n=500
 p=20
 X=matrix(rnorm(n*p),ncol=p)

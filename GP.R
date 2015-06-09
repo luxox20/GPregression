@@ -10,7 +10,7 @@ gp.init<-function(xtrain,ytrain,option=""){
   gp$nu<-rep(0,d)
   gp$min_noise <- sqrt(.Machine$double.eps); #minimun allowed output
   gp$sigma_f<-0 #alpha
-  gp$nwts<-2 + d + 1 # number of parameters of covariance function  
+  gp$nwts<-3 + d # number of parameters of covariance function  
   gp$opt=option
   return(gp)
 }
@@ -28,10 +28,10 @@ gp.setdata<-function(gp,xtrain,ytrain){
 gp.sample<-function(gp){
   d<-dim(gp$xtrain)[2]
   mu<-1*d^(2)
-  gp$sigma_f<-rlnorm(1,0,1)
-  gp$sigma_y<-rlnorm(1,0,1)
-  gp$nu<-rbinom(d,1,.2)
-  gp$bias<-rlnorm(1,0,1)
+  gp$sigma_f<-rnorm(1,0,1)
+  gp$sigma_y<-rnorm(1,0,1)
+  gp$nu<-rnorm(d,0,1)
+  gp$bias<-rnorm(1,0,1)
   return(gp)
 }
 
@@ -78,14 +78,13 @@ gp.pred<-function(gp,xtest){
 gp.loglike<-function(gp){
 	n<-dim(gp$xtrain)[1]
 	Kxx<-gp.covar(gp,gp$xtrain,gp$xtrain)
-	sigma<- Kxx + (gp$min_noise + exp(gp$sigma_y))*diag(n) + exp(gp$bias)
-    ll<-0
-	nkxx<-dim(sigma)
-    nyt<-dim(gp$ytrain)	
-	Fun<-.C("log_likelihood",as.double(sigma),
+	ll<-0
+	nkxx<-dim(Kxx)
+  nyt<-dim(gp$ytrain)	
+	Fun<-.C("log_likelihood",as.double(Kxx),
         as.integer(nkxx[1]),as.integer(nkxx[2]),
-        as.double(gp$ytrain),as.integer(nyt[1]),ll=as.double(ll))
-    ll=Fun$ll+gp.prior(gp)
+        as.double(gp$ytrain),as.integer(nyt[1]),as.double(gp$sigma_f),as.double(gp$sigma_y),as.double(gp$bias),ll=as.double(ll))
+    ll=Fun$ll#+gp.prior(gp)
 	return(as.numeric(ll))	
 }
 
@@ -103,7 +102,8 @@ gp.optim <-function(gp){
   } 
   Grad = function(para){
     gp<-gp.setparams(gp,para)
-    grad<-gp.grad(gp)
+    #grad<-gp.grad(gp)
+    grad<-grad(Linn,gp.getparams(gp))
     return(grad)
   }
   (est = optim(init.par, Linn, gr=Grad, method="BFGS", hessian=FALSE))

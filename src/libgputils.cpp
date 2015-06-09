@@ -4,6 +4,7 @@
 #include <Eigen/Eigen>
 #include <Eigen/Dense>
 #include <random> 
+#include <limits> 
 
 using namespace Eigen;
 using namespace std;
@@ -13,9 +14,9 @@ extern "C"{
   #include <R.h>
 
   
-  void squared_exponential(double* XData, int* Xnrow, int* Xncol,double* Ydata, int* Ynrow, int* Yncol,double* fpar, double* nu, int* dim, double* result){
-	Map<MatrixXd>X(XData,*Xnrow,*Xncol);
-	Map<MatrixXd>Y(Ydata,*Ynrow, *Yncol);
+  void squared_exponential(double* XData, int* Xnrow, int* Xncol,double* Ydata, int* Ynrow, int* Yncol,double* sigma_f, double* nu, int* dim, double* result){
+	  Map<MatrixXd>X(XData,*Xnrow,*Xncol);
+	  Map<MatrixXd>Y(Ydata,*Ynrow, *Yncol);
     MatrixXd Cov;
     Cov.resize(*Xnrow,*Ynrow);
 		for(int i=0; i < *Xnrow; ++i){			
@@ -23,9 +24,9 @@ extern "C"{
 				double d,S=0;
 				for(int k=0; k < *dim; ++k){				
 					d = X(i,k) - Y(j,k);
-					S += nu[k] * pow(d,2.0);
+					S += exp(nu[k]) * pow(d,2.0);
 				}				
-				Cov(i,j) =  exp(*fpar - 0.5 * S);
+				Cov(i,j) =  exp(*sigma_f - 0.5 * S);
 			}
 		}
     memcpy(result,Cov.data(),Cov.size() * sizeof(double));
@@ -66,49 +67,55 @@ extern "C"{
 		}	
 	}
 
-void log_likelihood(double* Kxxdata, int* Kxxnrow, int* Kxxncol,double* Ydata, int* Ynrow, double* result){
+void log_likelihood(double* Kxxdata, int* Kxxnrow, int* Kxxncol,double* Ydata, int* Ynrow,double* sigma_f,double* sigma_y,double* bias, double* result){
 		Map<MatrixXd>Kxx(Kxxdata,*Kxxnrow,*Kxxncol);
 		Map<VectorXd>Y(Ydata,*Ynrow);
-        LLT<MatrixXd> Chol(Kxx);
+    MatrixXd unos = MatrixXd::Ones(*Kxxnrow,*Kxxncol);
+    MatrixXd bias_mat = exp(*bias)*unos;
+    MatrixXd Sigma=Kxx+(numeric_limits<double>::min()+exp(*sigma_y))*MatrixXd::Identity(*Kxxnrow,*Kxxncol);
+    Sigma+=bias_mat;
+    LLT<MatrixXd> Chol(Sigma);
 		ArrayXd loglike = -.5*Y.transpose()*Chol.solve(Y);
-		loglike += -0.5*log(Kxx.determinant())-(0.5* *Ynrow * log(2*M_PI));			
+		loglike += -0.5*log(Sigma.determinant())-(0.5* *Ynrow * log(2*M_PI));			
 		result[0] = loglike[0];
 	}
 
-  void gp_grad(double* XData,int* XDatanrow,int* XDatancol,double* YData,int* YDatanrow,int* YDatancol,double* KxxData,int* KxxDatanrow,int* KxxDatancol,double* fparData,double* noiseData,double* biasData,double* nuData,double* resultado_grad){
+  void gp_grad(double* XData,int* XDatanrow,int* XDatancol,double* YData,int* YDatanrow,int* YDatancol,double* KxxData,int* KxxDatanrow,int* KxxDatancol,double* sigma_f,double* sigma_y,double* bias,double* nu,double* resultado_grad){
     Map<MatrixXd>Kxx(KxxData,*KxxDatanrow,*KxxDatancol);
     Map<MatrixXd>X(XData,*XDatanrow,*XDatancol);
     Map<VectorXd>Y(YData,*YDatanrow,*YDatancol);
-    Map<VectorXd>nu(nuData,*XDatancol);
-    MatrixXd unos = MatrixXd::Ones(*XDatanrow,*XDatanrow);
-    MatrixXd fac = exp(*biasData)*unos;
-    MatrixXd Sigma=Kxx+exp(*noiseData)*MatrixXd::Identity(*XDatanrow,*XDatanrow);
-    Sigma+=fac;
+    Map<VectorXd>nu_vec(nu,*XDatancol);
+    MatrixXd unos = MatrixXd::Ones(*KxxDatanrow,*KxxDatancol);
+    MatrixXd bias_mat = exp(*bias)*unos;
+    MatrixXd Sigma=Kxx+(numeric_limits<double>::min()+exp(*sigma_y))*MatrixXd::Identity(*KxxDatanrow,*KxxDatancol);
+    Sigma+=bias_mat;
     MatrixXd invSigma=Sigma.inverse();
-    VectorXd cninvt=invSigma*Y;
+    LLT<MatrixXd> Chol(Sigma);
+    VectorXd cninvt=Chol.solve(Y);
+    //cout << "size:" << cninvt.size() << endl;
+    //VectorXd cninvt=invSigma*Y;
     VectorXd grad=VectorXd::Zero(3+*XDatancol);
     // v0 gradiente
-   double gfpar = (invSigma*Kxx).trace() - (cninvt.transpose())*Kxx*cninvt;      
-
-
-    double gbias = (invSigma*fac).trace() - (cninvt.transpose())*fac*cninvt;
-    
+   double g_sigma_f = (invSigma*Kxx).trace() - (cninvt.transpose())*Kxx*cninvt;      
+    double g_bias = (invSigma*bias_mat).trace() - (cninvt.transpose())*bias_mat*cninvt;
     // inputs gradient
-    double gnoise = exp(*noiseData)*(invSigma.trace() - (cninvt.transpose())*cninvt);  
-
+    double g_sigma_y = (exp(*sigma_y))*(invSigma.trace() - cninvt.dot(cninvt));  
     //inputs gradient
-    MatrixXd matx;  
-    MatrixXd dmat;
-    VectorXd gnu(*XDatancol); 
-    MatrixXd aux1 = MatrixXd::Ones(1,*XDatanrow);
-    MatrixXd aux2 = MatrixXd::Ones(*XDatanrow,1);
+    VectorXd g_nu= VectorXd::Zero(*XDatancol); 
     
-    for(int k=1;k<(*XDatancol)+1;k++){
-      matx.noalias() = (X.block(0,0,*XDatanrow,k).cwiseProduct(X.block(0,0,*XDatanrow,k)))*aux1 - 2*(X.block(0,0,*XDatanrow,k))*((X.block(0,0,*XDatanrow,k)).transpose()) + aux2*((X.block(0,0,*XDatanrow,k)).cwiseProduct(X.block(0,0,*XDatanrow,k)).transpose());
-      dmat.noalias() = -0.5*exp(nu(k-1))*(Kxx.cwiseProduct(matx));
-      gnu(k-1) = 0.5*((invSigma*dmat).diagonal().sum()) - (cninvt.transpose())*dmat*cninvt;
+    for(int l=0;l<*XDatancol;l++){
+      MatrixXd matx=MatrixXd::Zero(*XDatanrow,*XDatanrow);  
+      MatrixXd dmat=MatrixXd::Zero(*XDatanrow,*XDatanrow);  ;
+      for(int i=0; i < *XDatanrow; ++i){      
+        for(int j=0; j < *XDatanrow; ++j){
+          double d=X(i,l) - X(j,l);
+          matx(i,j) =  pow(d,2.0);
+        }
+      }
+      dmat=-0.5*exp(nu_vec(l))*Kxx.cwiseProduct(matx);
+      g_nu(l) = (invSigma*dmat).trace() - (cninvt.transpose())*dmat*cninvt;
     }
-    grad << gfpar,gnoise,gbias,gnu;
+    grad << g_sigma_f,g_sigma_y,g_bias,g_nu;
     grad = 0.5*grad;
     memcpy(resultado_grad,grad.data(),grad.size()*sizeof(double));
   }
@@ -181,10 +188,10 @@ void log_likelihood(double* Kxxdata, int* Kxxnrow, int* Kxxncol,double* Ydata, i
       Map<VectorXd>grad3(&resultado_grad[0],*length_init_par);      
       pstar = pstar - (delta/2)*grad3;
            
-      log_likelihood(KxxData,Kxxnrow,Kxxncol,YData,YDatanrow,&resultado_likelihood_1);
+      //log_likelihood(KxxData,Kxxnrow,Kxxncol,YData,YDatanrow,&resultado_likelihood_1);
       U0 = (-1)*resultado_likelihood_1;
          
-      log_likelihood(KxxData,Kxxnrow,Kxxncol,YData,YDatanrow,&resultado_likelihood_2);
+      //log_likelihood(KxxData,Kxxnrow,Kxxncol,YData,YDatanrow,&resultado_likelihood_2);
       UStar = (-1)*resultado_likelihood_2;
 
       K0 = p0.transpose()*(p0*0.5);
