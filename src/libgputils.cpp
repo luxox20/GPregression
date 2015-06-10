@@ -118,88 +118,66 @@ void log_likelihood(double* Kxxdata, int* Kxxnrow, int* Kxxncol,double* Ydata, i
     memcpy(resultado_grad,grad.data(),grad.size()*sizeof(double));
   }
   
-  void gp_hmc(int* niter,int* leapfrogData,int* burninData,double* KxxData,int* Kxxnrow,int* Kxxncol,double* XData,int* Xnrow,int* Xncol,double* YData,int* Ynrow,int* Yncol,double* sigma_f,double* sigma_y,double* bias,double* nu,double* resultado_hmc,int* resultado_rate){
-    int param_dim=(3+*Xncol);
-    Map<VectorXd>nu_vec(nu,*Xncol);
-    MatrixXd samples = MatrixXd::Zero(*niter+1,param_dim);
-    VectorXd p0=VectorXd::Zero(param_dim);
-    VectorXd x0=VectorXd::Zero(param_dim);      
-    VectorXd pstar=VectorXd::Zero(param_dim);
-    VectorXd pstar_n=VectorXd::Zero(param_dim);
-    VectorXd xstar=VectorXd::Zero(param_dim);    
-    VectorXd leap_grad=VectorXd::Zero(param_dim);
-    //double U0, UStar, K0, KStar, alpha, uniforme;
+  void gp_hmc(int* niter,int* leapfrogData,int* burninData,double* KxxData,int* Kxxnrow,int* Kxxncol,double* XData,int* Xnrow,int* Xncol,double* YData,int* Ynrow,int* Yncol,double* init_par,int* param_dim,double* resultado_hmc,int* resultado_rate){
+    Map<VectorXd>x0(init_par,*param_dim);
+    MatrixXd samples = MatrixXd::Zero(*niter+1,*param_dim);
+    VectorXd p0=VectorXd::Zero(*param_dim);
+    VectorXd pstar=VectorXd::Zero(*param_dim);
+    VectorXd pstar_n=VectorXd::Zero(*param_dim);
+    VectorXd xstar=VectorXd::Zero(*param_dim);    
+    VectorXd leap_grad=VectorXd::Zero(*param_dim);
     default_random_engine generator;
     uniform_real_distribution<double> runif(0.0,1.0);
     normal_distribution<double> rnormal(0.0,1.0);
     bernoulli_distribution rbernoulli(0.25);
-    double lambda;
-    double aleatorio = rnormal(generator);            
-    if(aleatorio < 0.5)
+    double lambda,rate=0.0;          
+    if(rnormal(generator) < 0.5)
       lambda = -1;    
     else
       lambda = 1;
-    double delta = lambda*0.02*(1.0+0.1*runif(generator));
-    
-    /*for(i=2;i<(*niter);i++){     
-
-      for(int p=0;p<(*length_init_par);p++)
+    samples.row(0)=x0;
+    double resultado_grad[*param_dim];
+    for(int i=1;i<(*niter);i++){     
+      double delta = lambda*0.02*(1.0+0.1*runif(generator));
+      for(int p=0;p<(*param_dim);p++)
         p0(p) = rnormal(generator);
-
-      x0 = init_par;
-      gp_grad(XData,XDatanrow,XDatancol,YData,YDatanrow,YDatancol,KxxData,Kxxnrow,Kxxncol,x0(1),x0(2),x0.tail(data_dim).data(),&resultado_grad[0]);
-      Map<VectorXd>grad(&resultado_grad[0],*length_init_par);
-      pstar.head(3) = p0.head(3) - (delta/2)*grad.head(3);
-      xstar.head(3) = x0.head(3) + delta*pstar.head(3);
-      xstar.tail(data_dim)=x0.tail(data_dim);
-      for(int d=3;d<data_dim;d++){
-        xstar[d]=rbernoulli(generator);
-      }  
-      for(j=1;j<(*leapfrogData)-1;j++){
-          try{
-            squared_exponential(XData,XDatanrow,XDatancol,XData,XDatanrow,XDatancol,&xstar(0),xstar.tail(data_dim).data(),&data_dim,KxxData);    
-            //gp_grad(KxxData,Kxxnrow,Kxxncol,XData,XDatanrow,XDatancol,invSigmaData,invSigmanrow,invSigmancol,trcinvData,cninvtData,cninvtnrow,&xstar(1),&xstar(2),xstar.tail(data_dim).data(),&resultado_grad[0]);         
-            Map<VectorXd>grad2(&resultado_grad[0],*length_init_par);
-            leap_grad = grad2;
-          }
-          catch(exception e){
-            squared_exponential(XData,XDatanrow,XDatancol,XData,XDatanrow,XDatancol,&x0(0),x0.tail(data_dim).data(),&data_dim,KxxData);       
-            //gp_grad(KxxData,Kxxnrow,Kxxncol,XData,XDatanrow,XDatancol,invSigmaData,invSigmanrow,invSigmancol,trcinvData,cninvtData,cninvtnrow,&x0(1),&x0(2),x0.tail(data_dim).data(),&resultado_grad[0]);       
-            Map<VectorXd>grad2(&resultado_grad[0],param_dim);
-            leap_grad = grad2;
-          }              
-          pstar.head(3) = pstar.head(3) - delta*leap_grad.head(3) ;
-          xstar.head(3)  = xstar.head(3)  + delta*pstar.head(3) ;
-      }
-      cout << "x_star:" << xstar.transpose() << endl;
-          
-      gp_grad(KxxData,Kxxnrow,Kxxncol,XData,XDatanrow,XDatancol,invSigmaData,invSigmanrow,invSigmancol,trcinvData,cninvtData,cninvtnrow,&xstar(1),&xstar(2),xstar.tail(data_dim).data(),&resultado_grad[0]);  
-      Map<VectorXd>grad3(&resultado_grad[0],*length_init_par);      
-      pstar = pstar - (delta/2)*grad3;
-           
-      log_likelihood(KxxData,Kxxnrow,Kxxncol,YData,YDatanrow,&resultado_likelihood_1);
-      U0 = (-1)*resultado_likelihood_1;
-         
-      log_likelihood(KxxData,Kxxnrow,Kxxncol,YData,YDatanrow,&resultado_likelihood_2);
-      UStar = (-1)*resultado_likelihood_2;
-
-      K0 = p0.transpose()*(p0*0.5);
-      pstar_n = (-1)*pstar;
-      KStar = pstar_n.transpose()*(pstar_n*0.5);
-      alpha = min(1.0,exp((U0+K0)-(UStar+KStar)));
+      x0 = samples.row(i-1);
+      gp_grad(XData,Xnrow,Xncol,YData,Ynrow,Yncol,KxxData,Kxxnrow,Kxxncol,&x0(0),&x0(1),&x0(2),x0.tail(*Xncol).data(),&resultado_grad[0]);
+      Map<VectorXd>grad(&resultado_grad[0],*param_dim);
+      pstar = p0 - (delta/2)*grad;
+      xstar = x0 + delta*pstar;
        
-      uniforme = runif(generator);
+      for(int j=1;j<(*leapfrogData)-1;j++){
+          squared_exponential(XData,Xnrow,Xncol,XData,Xnrow,Xncol,&xstar(0),xstar.tail(*Xncol).data(),Xncol,KxxData);    
+          gp_grad(XData,Xnrow,Xncol,YData,Ynrow,Yncol,KxxData,Kxxnrow,Kxxncol,&xstar(0),&xstar(1),&xstar(2),xstar.tail(*Xncol).data(),&resultado_grad[0]);         
+          Map<VectorXd>leap_grad(&resultado_grad[0],*param_dim);            
+          pstar.noalias() = pstar - delta*leap_grad;
+          xstar.noalias() = xstar  + delta*pstar;
+      }
+      cout << "x_star:" << xstar.transpose() << endl;          
+      gp_grad(XData,Xnrow,Xncol,YData,Ynrow,Yncol,KxxData,Kxxnrow,Kxxncol,&xstar(0),&xstar(1),&xstar(2),xstar.tail(*Xncol).data(),&resultado_grad[0]); 
+      Map<VectorXd>grad3(&resultado_grad[0],*param_dim);      
+      pstar.noalias() = pstar - (delta/2)*grad3;           
+      double ll1,ll2;
+      log_likelihood(KxxData,Kxxnrow,Kxxncol,YData,Ynrow,&xstar(0),&xstar(1),&xstar(2),&ll1);
+      double U0 = (-1)*ll1;
+      squared_exponential(XData,Xnrow,Xncol,XData,Xnrow,Xncol,&x0(0),x0.tail(*Xncol).data(),Xncol,KxxData);    
+      log_likelihood(KxxData,Kxxnrow,Kxxncol,YData,Ynrow,&x0(0),&x0(1),&x0(2),&ll2);
+      double UStar = (-1)*ll2;
+      double K0 = p0.transpose()*(p0*0.5);
+      pstar_n = (-1)*pstar;
+      double KStar = pstar_n.transpose()*(pstar_n*0.5);
+      double alpha = min(1.0,exp((U0+K0)-(UStar+KStar)));     
+      double uniforme = runif(generator);
       if(uniforme<alpha){
-          samples.block(i,0,1,*length_init_par) = xstar.transpose();
+          samples.row(i) = xstar.transpose();
           rate = rate+1;
-          x0=xstar;
       }
       else{
-          samples.block(i,0,1,*length_init_par) = samples.block(i-1,0,1,*length_init_par);
+          samples.row(i) = samples.row(i-1);
       }
-    }
-    */
-    //memcpy(resultado_hmc,samples.data(),samples.size()*sizeof(double));
-    //resultado_rate[0] = rate;  
+    } 
+    memcpy(resultado_hmc,samples.data(),samples.size()*sizeof(double));
+    resultado_rate[0] = rate;  
   }
 }
