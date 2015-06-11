@@ -118,12 +118,11 @@ void log_likelihood(double* Kxxdata, int* Kxxnrow, int* Kxxncol,double* Ydata, i
     memcpy(resultado_grad,grad.data(),grad.size()*sizeof(double));
   }
   
-  void gp_hmc(int* niter,int* leapfrogData,int* burninData,double* KxxData,int* Kxxnrow,int* Kxxncol,double* XData,int* Xnrow,int* Xncol,double* YData,int* Ynrow,int* Yncol,double* init_par,int* param_dim,double* resultado_hmc,int* resultado_rate){
+  void gp_hmc(int* niter,int* leapfrog,int* burnin,double* KxxData,int* Kxxnrow,int* Kxxncol,double* XData,int* Xnrow,int* Xncol,double* YData,int* Ynrow,int* Yncol,double* init_par,int* param_dim,double* resultado_hmc,int* resultado_rate){
     Map<VectorXd>x0(init_par,*param_dim);
-    MatrixXd samples = MatrixXd::Zero(*niter+1,*param_dim);
+    MatrixXd samples = MatrixXd::Zero(*niter,*param_dim);
     VectorXd p0=VectorXd::Zero(*param_dim);
     VectorXd pstar=VectorXd::Zero(*param_dim);
-    VectorXd pstar_n=VectorXd::Zero(*param_dim);
     VectorXd xstar=VectorXd::Zero(*param_dim);    
     VectorXd leap_grad=VectorXd::Zero(*param_dim);
     default_random_engine generator;
@@ -137,7 +136,7 @@ void log_likelihood(double* Kxxdata, int* Kxxnrow, int* Kxxncol,double* Ydata, i
       lambda = 1;
     samples.row(0)=x0;
     double resultado_grad[*param_dim];
-    for(int i=1;i<(*niter);i++){     
+    for(int i=1;i<=(*niter);i++){     
       double delta = lambda*0.02*(1.0+0.1*runif(generator));
       for(int p=0;p<(*param_dim);p++)
         p0(p) = rnormal(generator);
@@ -147,24 +146,25 @@ void log_likelihood(double* Kxxdata, int* Kxxnrow, int* Kxxncol,double* Ydata, i
       pstar = p0 - (delta/2)*grad;
       xstar = x0 + delta*pstar;
        
-      for(int j=1;j<(*leapfrogData)-1;j++){
+      for(int j=1;j<=(*leapfrog);j++){
           squared_exponential(XData,Xnrow,Xncol,XData,Xnrow,Xncol,&xstar(0),xstar.tail(*Xncol).data(),Xncol,KxxData);    
           gp_grad(XData,Xnrow,Xncol,YData,Ynrow,Yncol,KxxData,Kxxnrow,Kxxncol,&xstar(0),&xstar(1),&xstar(2),xstar.tail(*Xncol).data(),&resultado_grad[0]);         
-          Map<VectorXd>leap_grad(&resultado_grad[0],*param_dim);            
+          Map<VectorXd>leap_grad(&resultado_grad[0],*param_dim);           
           pstar.noalias() = pstar - delta*leap_grad;
           xstar.noalias() = xstar  + delta*pstar;
       }
-      cout << "x_star:" << xstar.transpose() << endl;          
-      gp_grad(XData,Xnrow,Xncol,YData,Ynrow,Yncol,KxxData,Kxxnrow,Kxxncol,&xstar(0),&xstar(1),&xstar(2),xstar.tail(*Xncol).data(),&resultado_grad[0]); 
-      Map<VectorXd>grad3(&resultado_grad[0],*param_dim);      
-      pstar.noalias() = pstar - (delta/2)*grad3;           
-      double ll1,ll2;
-      log_likelihood(KxxData,Kxxnrow,Kxxncol,YData,Ynrow,&xstar(0),&xstar(1),&xstar(2),&ll1);
-      double U0 = (-1)*ll1;
-      squared_exponential(XData,Xnrow,Xncol,XData,Xnrow,Xncol,&x0(0),x0.tail(*Xncol).data(),Xncol,KxxData);    
-      log_likelihood(KxxData,Kxxnrow,Kxxncol,YData,Ynrow,&x0(0),&x0(1),&x0(2),&ll2);
-      double UStar = (-1)*ll2;
+      //cout << "x_star:" << xstar.transpose() << endl;          
+  
+      double ll_0,ll_star;
+      squared_exponential(XData,Xnrow,Xncol,XData,Xnrow,Xncol,&x0(0),x0.tail(*Xncol).data(),Xncol,KxxData);
+      log_likelihood(KxxData,Kxxnrow,Kxxncol,YData,Ynrow,&x0(0),&x0(1),&x0(2),&ll_0);
+      double U0 = (-1)*ll_0;
       double K0 = p0.transpose()*(p0*0.5);
+      
+      squared_exponential(XData,Xnrow,Xncol,XData,Xnrow,Xncol,&xstar(0),xstar.tail(*Xncol).data(),Xncol,KxxData); 
+      log_likelihood(KxxData,Kxxnrow,Kxxncol,YData,Ynrow,&xstar(0),&xstar(1),&xstar(2),&ll_star);
+      double UStar = (-1)*ll_star;
+      VectorXd pstar_n(*param_dim);
       pstar_n = (-1)*pstar;
       double KStar = pstar_n.transpose()*(pstar_n*0.5);
       double alpha = min(1.0,exp((U0+K0)-(UStar+KStar)));     

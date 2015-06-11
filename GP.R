@@ -12,6 +12,11 @@ gp.init<-function(xtrain,ytrain,option=""){
   gp$sigma_f<-0 #alpha
   gp$nwts<-3 + d # number of parameters of covariance function  
   gp$opt=option
+  fin<-TRUE
+  while(fin){
+    gp<-gp.sample(gp)
+    fin<-!is.finite(gp.loglike(gp))
+  }
   return(gp)
 }
 
@@ -116,39 +121,11 @@ gp.optim <-function(gp){
 
 #gp.hmc <-function(gp,niter=1000,leapfrog=10,burnin=500)
 gp.hmc<-function(gp,niter,leapfrog,burnin){
-    #require(HybridMC)
-    #require(numDeriv)
-    init.par<-gp.getparams(gp)
-    Linn = function(para){
-        gp<-gp.setparams(gp,para)
-        fit <- gp.loglike(gp)
-        return(-fit)
-    } 
-    Grad = function(para){
-        gp<-gp.setparams(gp,para)
-        grad<-gp.grad(gp)
-        return(grad)
-      }
-      K = function(p){
-        return(t(p)%*%p/2)
-    }
-  
-    n<-dim(gp$xtrain)[1]
-    d<-dim(gp$xtrain)[2] 
     Kxx<-gp.covar(gp,gp$xtrain,gp$xtrain) #covf
-    
-    sigma<- Kxx + (gp$min_noise + exp(gp$sigma_y))*diag(n) + exp(gp$bias) #matriz	
-    invSigma<-solve(sigma) #cninv # matriz  
-    trcinv<-trace(invSigma)  #variable
-    cninvt<-invSigma%*%gp$ytrain #vector
-    
-    dimKxx <- dim(Kxx);
-    diminvSigma <- dim(invSigma);
-    dimcninvt <- dim(cninvt);
-    
+    init.par<-gp.getparams(gp)
     samples <- matrix(0,nrow=niter,ncol=length(init.par));
     rate <- c(0);    
-    Fun <- .C("gp_hmc",as.integer(niter),as.integer(leapfrog),as.integer(burnin),as.double(init.par),as.integer(length(init.par)),as.double(Kxx),as.integer(dimKxx[1]),as.integer(dimKxx[2]),as.double(gp$xtrain),as.integer(dim(gp$xtrain)[1]),as.integer(dim(gp$xtrain)[2]),as.double(gp$ytrain),as.integer(dim(gp$ytrain)[1]),as.integer(dim(gp$ytrain)[2]),as.double(invSigma),as.integer(diminvSigma[1]),as.integer(diminvSigma[2]),as.double(trcinv),as.double(cninvt),as.integer(dimcninvt[1]),as.double(gp$sigma_y),as.double(gp$bias),as.double(gp$nu),samples=as.double(samples),rate=as.integer(rate));
+    Fun <- .C("gp_hmc",as.integer(niter),as.integer(leapfrog),as.integer(burnin),as.double(Kxx),as.integer(dim(Kxx)[1]),as.integer(dim(Kxx)[2]),as.double(gp$xtrain),as.integer(dim(gp$xtrain)[1]),as.integer(dim(gp$xtrain)[2]),as.double(gp$ytrain),as.integer(dim(gp$ytrain)[1]),as.integer(dim(gp$ytrain)[2]),as.double(init.par),as.integer(length(init.par)),samples=as.double(samples),rate=as.integer(rate));
     samples <- matrix(Fun$samples,nrow=niter,ncol=length(init.par));
     #samples <- matrix(Fun$samples,nrow=5,ncol=length(init.par));
     rate <- as.integer(Fun$rate);  
