@@ -9,15 +9,15 @@ pca<-function(data,K){
   sorted<-sort(v$values,index.return=TRUE,decreasing=TRUE)
   pca<-v$vectors[,sorted$ix[1:K]]
   for(i in 1:N) y[,i]<-t(pca)%*%(data[i,]-m)
-  return(list(rotations=y,loadings=pca,center=m,values=v$values[sorted$ix[1:K]]))
+  return(list(rotations=t(y),loadings=pca,center=m,values=v$values[sorted$ix[1:K]]))
 }
 
-pcr<-function(X,y,K,subset){
+pcr<-function(X,y,K){
   N<-dim(X)[1]
   D<-dim(X)[2]
-  p<-pca(X[subset,],K)
+  p<-pca(X,K)
   test<-matrix(0,K,N)
-  fit<-lm(y~t(p$rotations))
+  fit<-lm(y~p$rotations)
   for(i in 1:N) test[,i]<-t(p$loadings)%*%(X[i,]-p$center)
   return(predict(fit,as.data.frame(t(test))$fitted.values))
 }
