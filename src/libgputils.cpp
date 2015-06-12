@@ -122,6 +122,7 @@ void log_likelihood(double* Kxxdata, int* Kxxnrow, int* Kxxncol,double* Ydata, i
     Map<VectorXd>x0(init_par,*param_dim);
     MatrixXd samples = MatrixXd::Zero(*niter,*param_dim);
     VectorXd p0=VectorXd::Zero(*param_dim);
+    VectorXd ind=VectorXd::Zero(*param_dim);
     VectorXd pstar=VectorXd::Zero(*param_dim);
     VectorXd xstar=VectorXd::Zero(*param_dim);    
     VectorXd leap_grad=VectorXd::Zero(*param_dim);
@@ -129,7 +130,8 @@ void log_likelihood(double* Kxxdata, int* Kxxnrow, int* Kxxncol,double* Ydata, i
     uniform_real_distribution<double> runif(0.0,1.0);
     normal_distribution<double> rnormal(0.0,1.0);
     bernoulli_distribution rbernoulli(0.25);
-    double lambda,rate=0.0;          
+    double lambda;
+    int rate=0;          
     if(rnormal(generator) < 0.5)
       lambda = -1;    
     else
@@ -137,46 +139,42 @@ void log_likelihood(double* Kxxdata, int* Kxxnrow, int* Kxxncol,double* Ydata, i
     samples.row(0)=x0;
     double resultado_grad[*param_dim];
     for(int i=1;i<=(*niter);i++){     
-      double delta = lambda*0.02*(1.0+0.1*runif(generator));
-      for(int p=0;p<(*param_dim);p++)
+      double ll_0,ll_star;
+      for(int p=0;p<(*param_dim);p++) {
         p0(p) = rnormal(generator);
-      x0 = samples.row(i-1);
+        ind(p) = rbernoulli(generator);
+      }
+      squared_exponential(XData,Xnrow,Xncol,XData,Xnrow,Xncol,&x0(0),x0.tail(*Xncol).data(),Xncol,KxxData);
+      log_likelihood(KxxData,Kxxnrow,Kxxncol,YData,Ynrow,&x0(0),&x0(1),&x0(2),&ll_0);
+      //double U0 = (-1)*ll_0;
+      //double K0 = p0.transpose()*(p0*0.5);
       gp_grad(XData,Xnrow,Xncol,YData,Ynrow,Yncol,KxxData,Kxxnrow,Kxxncol,&x0(0),&x0(1),&x0(2),x0.tail(*Xncol).data(),&resultado_grad[0]);
       Map<VectorXd>grad(&resultado_grad[0],*param_dim);
-      pstar = p0 - (delta/2)*grad;
-      xstar = x0 + delta*pstar;
-       
-      for(int j=1;j<=(*leapfrog);j++){
+      //double delta = lambda*0.02*(1.0+0.1*runif(generator));
+      //pstar = p0 - (delta/2)*grad;
+      //xstar = x0 + delta*pstar;
+      xstar = x0 + p0.cwiseProduct(ind);
+      /*for(int j=1;j<=(*leapfrog);j++){
           squared_exponential(XData,Xnrow,Xncol,XData,Xnrow,Xncol,&xstar(0),xstar.tail(*Xncol).data(),Xncol,KxxData);    
           gp_grad(XData,Xnrow,Xncol,YData,Ynrow,Yncol,KxxData,Kxxnrow,Kxxncol,&xstar(0),&xstar(1),&xstar(2),xstar.tail(*Xncol).data(),&resultado_grad[0]);         
           Map<VectorXd>leap_grad(&resultado_grad[0],*param_dim);           
           pstar.noalias() = pstar - delta*leap_grad;
           xstar.noalias() = xstar  + delta*pstar;
-      }
-      //cout << "x_star:" << xstar.transpose() << endl;          
-  
-      double ll_0,ll_star;
-      squared_exponential(XData,Xnrow,Xncol,XData,Xnrow,Xncol,&x0(0),x0.tail(*Xncol).data(),Xncol,KxxData);
-      log_likelihood(KxxData,Kxxnrow,Kxxncol,YData,Ynrow,&x0(0),&x0(1),&x0(2),&ll_0);
-      double U0 = (-1)*ll_0;
-      double K0 = p0.transpose()*(p0*0.5);
-      
+      }*/         
+       
       squared_exponential(XData,Xnrow,Xncol,XData,Xnrow,Xncol,&xstar(0),xstar.tail(*Xncol).data(),Xncol,KxxData); 
       log_likelihood(KxxData,Kxxnrow,Kxxncol,YData,Ynrow,&xstar(0),&xstar(1),&xstar(2),&ll_star);
-      double UStar = (-1)*ll_star;
-      VectorXd pstar_n(*param_dim);
-      pstar_n = (-1)*pstar;
-      double KStar = pstar_n.transpose()*(pstar_n*0.5);
-      double alpha = min(1.0,exp((U0+K0)-(UStar+KStar)));     
-      double uniforme = runif(generator);
-      if(uniforme<alpha){
-          samples.row(i) = xstar.transpose();
-          rate = rate+1;
+      //double UStar = (-1)*ll_star;
+      //VectorXd pstar_n(*param_dim);
+      //pstar_n = (-1)*pstar;
+      //double KStar = pstar_n.transpose()*(pstar_n*0.5);
+      //double alpha = min(1.0,exp((U0+K0)-(UStar+KStar)));     
+      if(log(runif(generator))< (ll_star-ll_0)){
+          samples.row(rate++) = xstar.transpose();
+          x0=xstar;
       }
-      else{
-          samples.row(i) = samples.row(i-1);
-      }
-    } 
+    }
+    samples.resize(rate,*param_dim); 
     memcpy(resultado_hmc,samples.data(),samples.size()*sizeof(double));
     resultado_rate[0] = rate;  
   }
