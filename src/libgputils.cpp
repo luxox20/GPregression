@@ -142,11 +142,6 @@ void log_likelihood(double* Kxxdata, int* Kxxnrow, int* Kxxncol,double* Ydata, i
   void gp_hmc(int* niter,int* leapfrog,int* burnin,double* KxxData,int* Kxxnrow,int* Kxxncol,double* XData,int* Xnrow,int* Xncol,double* YData,int* Ynrow,int* Yncol,double* init_par,int* param_dim,double* resultado_hmc,int* resultado_rate){
     Map<VectorXd>x0(init_par,*param_dim);
     MatrixXd samples = MatrixXd::Zero(*niter,*param_dim);
-    VectorXd p0=VectorXd::Zero(*param_dim);
-    VectorXd ind=VectorXd::Zero(*param_dim);
-    VectorXd pstar=VectorXd::Zero(*param_dim);
-    VectorXd xstar=VectorXd::Zero(*param_dim);    
-    VectorXd leap_grad=VectorXd::Zero(*param_dim);
     default_random_engine generator;
     uniform_real_distribution<double> runif(0.0,1.0);
     normal_distribution<double> rnormal(0.0,1.0);
@@ -160,6 +155,8 @@ void log_likelihood(double* Kxxdata, int* Kxxnrow, int* Kxxncol,double* Ydata, i
     samples.row(0)=x0;
     double resultado_grad[*param_dim];
     for(int i=1;i<(*niter);i++){     
+      VectorXd p0=VectorXd::Zero(*param_dim);
+      VectorXd pstar,xstar;
       double ll_0,ll_star;
       for(int p=0;p<(*param_dim);p++) {
         p0(p) = rnormal(generator);
@@ -170,23 +167,24 @@ void log_likelihood(double* Kxxdata, int* Kxxnrow, int* Kxxncol,double* Ydata, i
       gp_grad(XData,Xnrow,Xncol,YData,Ynrow,Yncol,KxxData,Kxxnrow,Kxxncol,&x0(0),&x0(1),&x0(2),x0.tail(*Xncol).data(),&resultado_grad[0]);
       Map<VectorXd>grad(&resultado_grad[0],*param_dim);
       double delta = lambda*0.02*(1.0+0.1*runif(generator));
+      //double delta=0.3;
       pstar = p0 - (delta/2)*grad;
       xstar = x0 + delta*pstar;
       for(int j=1;j<=(*leapfrog-1);j++){
           squared_exponential(XData,Xnrow,Xncol,XData,Xnrow,Xncol,&xstar(0),xstar.tail(*Xncol).data(),Xncol,KxxData);    
           gp_grad(XData,Xnrow,Xncol,YData,Ynrow,Yncol,KxxData,Kxxnrow,Kxxncol,&xstar(0),&xstar(1),&xstar(2),xstar.tail(*Xncol).data(),&resultado_grad[0]);         
           Map<VectorXd>leap_grad(&resultado_grad[0],*param_dim);           
-          pstar.noalias() = pstar - delta*leap_grad;
-          xstar.noalias() = xstar  + delta*pstar;
-      }         
-       
+          pstar.noalias() -=  delta*leap_grad;
+          xstar.noalias() +=  delta*pstar;
+      }             
       squared_exponential(XData,Xnrow,Xncol,XData,Xnrow,Xncol,&xstar(0),xstar.tail(*Xncol).data(),Xncol,KxxData); 
       log_likelihood(KxxData,Kxxnrow,Kxxncol,YData,Ynrow,&xstar(0),&xstar(1),&xstar(2),&ll_star);
       double KStar = pstar.cwiseProduct(pstar).sum()*0.5;
-      //double alpha = min(1.0,exp((U0+K0)-(UStar+KStar)));     
-      if(log(runif(generator))< (ll_0+K0-ll_star-KStar)){
+      double alpha = min(1.0,exp((ll_star+KStar)-(ll_0+K0)));     
+      if(runif(generator)< alpha){
           samples.row(i) = xstar.transpose();
           x0=xstar;
+          rate++;
       }
       else{
          samples.row(i) = x0.transpose();

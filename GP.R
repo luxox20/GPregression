@@ -129,7 +129,7 @@ gp.hmc<-function(gp,niter,leapfrog,burnin){
     Fun <- .C("gp_hmc",as.integer(niter),as.integer(leapfrog),as.integer(burnin),as.double(Kxx),as.integer(dim(Kxx)[1]),as.integer(dim(Kxx)[2]),as.double(gp$xtrain),as.integer(dim(gp$xtrain)[1]),as.integer(dim(gp$xtrain)[2]),as.double(gp$ytrain),as.integer(dim(gp$ytrain)[1]),as.integer(dim(gp$ytrain)[2]),as.double(init.par),as.integer(length(init.par)),samples=as.double(samples),rate=as.integer(rate));
     rate <- as.integer(Fun$rate);  
     samples <- matrix(Fun$samples,nrow=niter,ncol=length(init.par));
-    #print(samples)
+    print(samples)
     #samples <- matrix(Fun$samples,nrow=5,ncol=length(init.par));
     cat('Acceptance Rate : ',    100*rate/niter,'%\n')
     post.par<-rep(0,length(init.par))

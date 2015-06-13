@@ -21,13 +21,13 @@ Linn = function(para){
 #print("exact derivative:")
 #print(gp.grad(gp))
 #Ñ!
-gp.mc<-gp.hmc(gp,niter=20000,leapfrog=3,5000)
+gp.mc<-gp.hmc(gp,niter=10000,leapfrog=3,5000)
 pred.mc<-gp.pred(gp.mc,X)
 rmse<-sum((y-pred.mc$mean)^2)/n
-print(rmse)
+cat("HMC : ",rmse,"\n")
 gp.nr<-gp.optim(gp)
 pred.nr<-gp.pred(gp.nr,X)
 rmse<-sum((y-pred.nr$mean)^2)/n
-print(rmse)
+cat("Evidence : ",rmse,"\n")
 plot(y,pred.mc$mean)
 points(y,pred.nr$mean,pch=5,col="red")
