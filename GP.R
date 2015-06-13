@@ -127,15 +127,13 @@ gp.hmc<-function(gp,niter,leapfrog,burnin){
     samples <- matrix(0,nrow=niter,ncol=length(init.par));
     rate <- c(0);    
     Fun <- .C("gp_hmc",as.integer(niter),as.integer(leapfrog),as.integer(burnin),as.double(Kxx),as.integer(dim(Kxx)[1]),as.integer(dim(Kxx)[2]),as.double(gp$xtrain),as.integer(dim(gp$xtrain)[1]),as.integer(dim(gp$xtrain)[2]),as.double(gp$ytrain),as.integer(dim(gp$ytrain)[1]),as.integer(dim(gp$ytrain)[2]),as.double(init.par),as.integer(length(init.par)),samples=as.double(samples),rate=as.integer(rate));
-    samples <- matrix(Fun$samples,nrow=Fun$rate,ncol=length(init.par));
-    #samples <- matrix(Fun$samples,nrow=5,ncol=length(init.par));
     rate <- as.integer(Fun$rate);  
+    samples <- matrix(Fun$samples,nrow=niter,ncol=length(init.par));
+    #print(samples)
+    #samples <- matrix(Fun$samples,nrow=5,ncol=length(init.par));
     cat('Acceptance Rate : ',    100*rate/niter,'%\n')
     post.par<-rep(0,length(init.par))
-    post.par[1]<-mean(samples[-1:-burnin,1])
-    post.par[2]<-mean(samples[-1:-burnin,2])
-    post.par[3]<-mean(samples[-1:-burnin,3])
-    post.par[-1:-3]<-mean(samples[-1:-burnin,-1:-3])
+    post.par<-colMeans(samples[-1:-burnin,])
     #post.par[-1:-3]<-rep(0,d)
     gp<-gp.setparams(gp,post.par)
     return(gp)

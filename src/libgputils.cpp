@@ -5,6 +5,7 @@
 #include <Eigen/Dense>
 #include <random> 
 #include <limits> 
+#include "plsa.h"
 
 using namespace Eigen;
 using namespace std;
@@ -13,6 +14,26 @@ extern "C"{
   #include <math.h>
   #include <R.h>
 
+   void plsa(double  *_pxy,int *X,int *Y,int *Z,int *maxIter,double *tol,double *tpxy,double *pygz,double *pxgz,double *pz){
+    PLSA p;
+    // MatrixXd pxy(*X,*Y); 
+    Map<MatrixXd>pxy(_pxy,*X,*Y);
+    //memcpy(pxy.data(),_pxy,(*X)*(*Y)*sizeof(double)); // memcpy more fast
+    p.plsa(pxy,*Z,*maxIter,*tol);
+
+    //tpxy=new double[p.get_tpxy().rows()*p.get_tpxy().cols()];
+    memcpy(tpxy,p.get_tpxy().data(),p.get_tpxy().rows()*p.get_tpxy().cols());
+
+    //pxgz=new double[p.get_pxgz().rows()*p.get_pxgz().cols()];
+    memcpy(pxgz,p.get_pxgz().data(),p.get_pxgz().rows()*p.get_pxgz().cols());
+
+    //pygz=new double[p.get_pygz().rows()*p.get_pygz().cols()];
+    memcpy(pygz,p.get_pygz().data(),p.get_pygz().rows()*p.get_pygz().cols());
+
+    //pz= new double[p.get_pz().size()];
+    memcpy(pz,p.get_pz().data(),p.get_pz().size());
+
+  }
   
   void squared_exponential(double* XData, int* Xnrow, int* Xncol,double* Ydata, int* Ynrow, int* Yncol,double* sigma_f, double* nu, int* dim, double* result){
 	  Map<MatrixXd>X(XData,*Xnrow,*Xncol);
@@ -138,43 +159,40 @@ void log_likelihood(double* Kxxdata, int* Kxxnrow, int* Kxxncol,double* Ydata, i
       lambda = 1;
     samples.row(0)=x0;
     double resultado_grad[*param_dim];
-    for(int i=1;i<=(*niter);i++){     
+    for(int i=1;i<(*niter);i++){     
       double ll_0,ll_star;
       for(int p=0;p<(*param_dim);p++) {
         p0(p) = rnormal(generator);
-        ind(p) = rbernoulli(generator);
       }
       squared_exponential(XData,Xnrow,Xncol,XData,Xnrow,Xncol,&x0(0),x0.tail(*Xncol).data(),Xncol,KxxData);
       log_likelihood(KxxData,Kxxnrow,Kxxncol,YData,Ynrow,&x0(0),&x0(1),&x0(2),&ll_0);
-      //double U0 = (-1)*ll_0;
-      //double K0 = p0.transpose()*(p0*0.5);
+      double K0 = p0.cwiseProduct(p0).sum()*0.5;
       gp_grad(XData,Xnrow,Xncol,YData,Ynrow,Yncol,KxxData,Kxxnrow,Kxxncol,&x0(0),&x0(1),&x0(2),x0.tail(*Xncol).data(),&resultado_grad[0]);
       Map<VectorXd>grad(&resultado_grad[0],*param_dim);
-      //double delta = lambda*0.02*(1.0+0.1*runif(generator));
-      //pstar = p0 - (delta/2)*grad;
-      //xstar = x0 + delta*pstar;
-      xstar = x0 + p0.cwiseProduct(ind);
-      /*for(int j=1;j<=(*leapfrog);j++){
+      double delta = lambda*0.02*(1.0+0.1*runif(generator));
+      pstar = p0 - (delta/2)*grad;
+      xstar = x0 + delta*pstar;
+      for(int j=1;j<=(*leapfrog-1);j++){
           squared_exponential(XData,Xnrow,Xncol,XData,Xnrow,Xncol,&xstar(0),xstar.tail(*Xncol).data(),Xncol,KxxData);    
           gp_grad(XData,Xnrow,Xncol,YData,Ynrow,Yncol,KxxData,Kxxnrow,Kxxncol,&xstar(0),&xstar(1),&xstar(2),xstar.tail(*Xncol).data(),&resultado_grad[0]);         
           Map<VectorXd>leap_grad(&resultado_grad[0],*param_dim);           
           pstar.noalias() = pstar - delta*leap_grad;
           xstar.noalias() = xstar  + delta*pstar;
-      }*/         
+      }         
        
       squared_exponential(XData,Xnrow,Xncol,XData,Xnrow,Xncol,&xstar(0),xstar.tail(*Xncol).data(),Xncol,KxxData); 
       log_likelihood(KxxData,Kxxnrow,Kxxncol,YData,Ynrow,&xstar(0),&xstar(1),&xstar(2),&ll_star);
-      //double UStar = (-1)*ll_star;
-      //VectorXd pstar_n(*param_dim);
-      //pstar_n = (-1)*pstar;
-      //double KStar = pstar_n.transpose()*(pstar_n*0.5);
+      double KStar = pstar.cwiseProduct(pstar).sum()*0.5;
       //double alpha = min(1.0,exp((U0+K0)-(UStar+KStar)));     
-      if(log(runif(generator))< (ll_star-ll_0)){
-          samples.row(rate++) = xstar.transpose();
+      if(log(runif(generator))< (ll_0+K0-ll_star-KStar)){
+          samples.row(i) = xstar.transpose();
           x0=xstar;
       }
+      else{
+         samples.row(i) = x0.transpose();
+      }
     }
-    samples.resize(rate,*param_dim); 
+    //samples.resize(rate,*param_dim); 
     memcpy(resultado_hmc,samples.data(),samples.size()*sizeof(double));
     resultado_rate[0] = rate;  
   }

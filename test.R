@@ -21,7 +21,7 @@ Linn = function(para){
 #print("exact derivative:")
 #print(gp.grad(gp))
 #Ñ!
-gp.mc<-gp.hmc(gp,niter=20000,leapfrog=3,10000)
+gp.mc<-gp.hmc(gp,niter=20000,leapfrog=3,5000)
 pred<-gp.pred(gp.mc,X)
 rmse<-sum((y-pred$mean)^2)/n
 print(rmse)
