@@ -22,10 +22,12 @@ Linn = function(para){
 #print(gp.grad(gp))
 #Ñ!
 gp.mc<-gp.hmc(gp,niter=20000,leapfrog=3,5000)
-pred<-gp.pred(gp.mc,X)
-rmse<-sum((y-pred$mean)^2)/n
+pred.mc<-gp.pred(gp.mc,X)
+rmse<-sum((y-pred.mc$mean)^2)/n
 print(rmse)
 gp.nr<-gp.optim(gp)
-pred<-gp.pred(gp.nr,X)
-rmse<-sum((y-pred$mean)^2)/n
+pred.nr<-gp.pred(gp.nr,X)
+rmse<-sum((y-pred.nr$mean)^2)/n
 print(rmse)
+plot(y,pred.mc$mean)
+points(y,pred.nr$mean,pch=5,col="red")
