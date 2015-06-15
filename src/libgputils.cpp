@@ -22,7 +22,7 @@ extern "C"{
     p.plsa(pxy,*Z,*maxIter,*tol);
 
     //tpxy=new double[p.get_tpxy().rows()*p.get_tpxy().cols()];
-    memcpy(tpxy,p.get_tpxy().data(),p.get_tpxy().rows()*p.get_tpxy().cols()+sizeof(double));
+    memcpy(tpxy,p.get_tpxy().data(),p.get_tpxy().rows()*p.get_tpxy().cols()*sizeof(double));
 
     //pxgz=new double[p.get_pxgz().rows()*p.get_pxgz().cols()];
     memcpy(pxgz,p.get_pxgz().data(),p.get_pxgz().rows()*p.get_pxgz().cols()*sizeof(double));
