@@ -14,7 +14,7 @@ extern "C"{
   #include <math.h>
   #include <R.h>
 
-   void plsa(double  *_pxy,int *X,int *Y,int *Z,int *maxIter,double *tol,double *tpxy,double *pygz,double *pxgz,double *pz){
+   void plsa(double* _pxy,int* X,int* Y,int* Z,int* maxIter,double* tol,double* tpxy,double* pygz,double* pxgz,double* pz){
     PLSA p;
     // MatrixXd pxy(*X,*Y); 
     Map<MatrixXd>pxy(_pxy,*X,*Y);
@@ -22,16 +22,16 @@ extern "C"{
     p.plsa(pxy,*Z,*maxIter,*tol);
 
     //tpxy=new double[p.get_tpxy().rows()*p.get_tpxy().cols()];
-    memcpy(tpxy,p.get_tpxy().data(),p.get_tpxy().rows()*p.get_tpxy().cols());
+    memcpy(tpxy,p.get_tpxy().data(),p.get_tpxy().rows()*p.get_tpxy().cols()+sizeof(double));
 
     //pxgz=new double[p.get_pxgz().rows()*p.get_pxgz().cols()];
-    memcpy(pxgz,p.get_pxgz().data(),p.get_pxgz().rows()*p.get_pxgz().cols());
+    memcpy(pxgz,p.get_pxgz().data(),p.get_pxgz().rows()*p.get_pxgz().cols()*sizeof(double));
 
     //pygz=new double[p.get_pygz().rows()*p.get_pygz().cols()];
-    memcpy(pygz,p.get_pygz().data(),p.get_pygz().rows()*p.get_pygz().cols());
+    memcpy(pygz,p.get_pygz().data(),p.get_pygz().rows()*p.get_pygz().cols()*sizeof(double));
 
     //pz= new double[p.get_pz().size()];
-    memcpy(pz,p.get_pz().data(),p.get_pz().size());
+    memcpy(pz,p.get_pz().data(),p.get_pz().size()*sizeof(double));
 
   }
   
