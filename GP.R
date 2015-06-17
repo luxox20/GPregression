@@ -1,5 +1,6 @@
-if(is.loaded("squared_exponential")) dyn.unload("src/libgputils.so")
 dyn.load("src/libgputils.so")
+
+
 
 gp.init<-function(xtrain,ytrain,option=""){
   gp<-list()
@@ -19,6 +20,20 @@ gp.init<-function(xtrain,ytrain,option=""){
     fin<-!is.finite(gp.loglike(gp))
   }
   return(gp)
+}
+
+gp.plsa<-function(gp,Z,maxiter,tol){
+  n<-dim(gp$xtrain)[1]
+  d<-dim(gp$xtrain)[2]
+  pxy<-matrix(0,nrow=n,ncol=d)
+  pxgz<-matrix(0,nrow=n,ncol=Z)
+  pygz<-matrix(0,nrow=d,ncol=Z)
+  pz<-rep(0,Z)
+  Fun<-.C("plsa",as.double(gp$xtrain),as.integer(n),as.integer(d),as.integer(Z),as.integer(maxiter),as.double(tol),pxy=as.double(pxy),pygz=as.double(pygz),pxgz=as.double(pxgz),pz=as.double(pz))    
+  pxy<-matrix(Fun$pxy,,nrow=n,ncol=d)
+  pxgz<-matrix(Fun$pxgz,nrow=n,ncol=Z)
+  pygz<-matrix(Fun$pygz,nrow=d,ncol=Z) 
+  return(list(pxy=pxy,pxgz=pxgz,pygz=pygz,pz=Fun$pz))
 }
 
 gp.setdata<-function(gp,xtrain,ytrain){

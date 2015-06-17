@@ -22,12 +22,17 @@ pcr<-function(X,y,K){
   return(predict(fit,as.data.frame(t(test))$fitted.values))
 }
 
-gpr<-function(X,y,K){
+gpr<-function(X,y,K,Xtest){
   require("GP.R")
   N<-dim(X)[1]
+  T<-dim(Xtest)[1]
   D<-dim(X)[2]
-  p<-pca(X,K)
-  fit<-gp.init(t(p$rotations),y)
-  fit<-gp.hmc(fit,1000,10,10)
-  test<-matrix(0,K,N)
+  comp<-pca(X,K)
+  fit<-gp.init(comp$rotations,y)
+  fit<-gp.hmc(fit,1000,10,100)
+  test<-matrix(0,T,K)
+  for(i in 1:T) test[i,]<-t(X[1,]-comp$center)%*%comp$loadings
+  pred.train<-gp.pred(fit,X)
+  pred.test<-gp.pred(fit,test)
+  return(list(y_train=pred.train$mean,y_test=pred.test$mean))
 }
