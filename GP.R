@@ -37,10 +37,10 @@ gp.plsa<-function(gp,Z,maxiter,tol){
 }
 
 gp.setdata<-function(gp,xtrain,ytrain){
-  yy<-gp.scale(ytrain)
-  ytrain<-yy$dato
-  gp$my<-yy$my
-  gp$sy<-yy$sy
+  #yy<-gp.scale(ytrain)
+  #ytrain<-yy$dato
+  #gp$my<-yy$my
+  #gp$sy<-yy$sy
   gp$xtrain<-as.matrix(xtrain)
   gp$ytrain<-as.matrix(ytrain)
   return(gp)
@@ -93,7 +93,7 @@ gp.pred<-function(gp,xtest){
        as.double(Kxs),as.integer(nkxs[1]),as.integer(nkxs[2]),as.double(Sigma),
        as.integer(nkxx[1]),as.integer(nkxx[2]),VarPred=as.double(pred.var))
     pred.var<-matrix(Fun2$VarPred,nrow=m,ncol=m,byrow=T)
-    return(list(mean=pred.mean*gp$sy+gp$my,variance=pred.var,Kxs=Kxs))
+    return(list(mean=pred.mean,variance=pred.var,Kxs=Kxs))
 }
 
 gp.loglike<-function(gp){
@@ -144,7 +144,6 @@ gp.hmc<-function(gp,niter,leapfrog,burnin){
     Fun <- .C("gp_hmc",as.integer(niter),as.integer(leapfrog),as.integer(burnin),as.double(Kxx),as.integer(dim(Kxx)[1]),as.integer(dim(Kxx)[2]),as.double(gp$xtrain),as.integer(dim(gp$xtrain)[1]),as.integer(dim(gp$xtrain)[2]),as.double(gp$ytrain),as.integer(dim(gp$ytrain)[1]),as.integer(dim(gp$ytrain)[2]),as.double(init.par),as.integer(length(init.par)),samples=as.double(samples),rate=as.integer(rate));
     rate <- as.integer(Fun$rate);  
     samples <- matrix(Fun$samples,nrow=niter,ncol=length(init.par));
-    print(samples)
     #samples <- matrix(Fun$samples,nrow=5,ncol=length(init.par));
     cat('Acceptance Rate : ',    100*rate/niter,'%\n')
     post.par<-rep(0,length(init.par))

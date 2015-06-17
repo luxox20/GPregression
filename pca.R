@@ -23,16 +23,19 @@ pcr<-function(X,y,K){
 }
 
 gpr<-function(X,y,K,Xtest){
-  require("GP.R")
+  source("GP.R")
   N<-dim(X)[1]
   T<-dim(Xtest)[1]
   D<-dim(X)[2]
   comp<-pca(X,K)
-  fit<-gp.init(comp$rotations,y)
-  fit<-gp.hmc(fit,1000,10,100)
+  fit<-gausspr(comp$rotations, y, kernel="rbfdot")
+  #fit<-gp.init(comp$rotations,y)
+  #fit<-gp.hmc(fit,20000,3,5000)
   test<-matrix(0,T,K)
   for(i in 1:T) test[i,]<-t(X[1,]-comp$center)%*%comp$loadings
-  pred.train<-gp.pred(fit,X)
-  pred.test<-gp.pred(fit,test)
-  return(list(y_train=pred.train$mean,y_test=pred.test$mean))
+  #pred.train<-gp.pred(fit,comp$rotations)
+  #pred.test<-gp.pred(fit,test)
+  pred.train<-predict(fit,as.data.frame(comp$rotations))
+  pred.test<-predict(fit,as.data.frame(test))
+  return(list(y_train=pred.train,y_test=pred.test))
 }
