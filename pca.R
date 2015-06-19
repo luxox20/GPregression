@@ -22,20 +22,32 @@ pcr<-function(X,y,K){
   return(predict(fit,as.data.frame(t(test))$fitted.values))
 }
 
-gpr<-function(X,y,K,Xtest){
+gp.pca<-function(X,y,K,Xtest){
   source("GP.R")
   N<-dim(X)[1]
   T<-dim(Xtest)[1]
   D<-dim(X)[2]
   comp<-pca(X,K)
-  fit<-gausspr(comp$rotations, y, kernel="rbfdot")
-  #fit<-gp.init(comp$rotations,y)
-  #fit<-gp.hmc(fit,20000,3,5000)
+  fit<-gp.init(comp$rotations,y)
+  fit<-gp.hmc(fit,20000,5,5000)
   test<-matrix(0,T,K)
-  for(i in 1:T) test[i,]<-t(X[1,]-comp$center)%*%comp$loadings
-  #pred.train<-gp.pred(fit,comp$rotations)
-  #pred.test<-gp.pred(fit,test)
-  pred.train<-predict(fit,as.data.frame(comp$rotations))
-  pred.test<-predict(fit,as.data.frame(test))
+  for(i in 1:T) test[i,]<-t(Xtest[i,]-comp$center)%*%comp$loadings
+  pred.train<-gp.pred(fit,comp$rotations)$mean
+  pred.test<-gp.pred(fit,test)$mean
+  return(list(y_train=pred.train,y_test=pred.test))
+}
+
+gp.plsa<-function(X,y,K,Xtest){
+  source("GP.R")
+  N<-dim(X)[1]
+  T<-dim(Xtest)[1]
+  D<-dim(X)[2]
+  plsa<-plsa(X,K,1e4,1e-6)
+  fit<-gp.init(plsa$pxgz,y)
+  fit<-gp.hmc(fit,20000,5,5000)
+  test<-matrix(0,T,K)
+  for(i in 1:T) test[i,]<-t(Xtest[i,])%*%plsa$pygz
+  pred.train<-gp.pred(fit,plsa$pxgz)$mean
+  pred.test<-gp.pred(fit,test)$mean
   return(list(y_train=pred.train,y_test=pred.test))
 }

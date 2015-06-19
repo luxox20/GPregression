@@ -22,14 +22,14 @@ gp.init<-function(xtrain,ytrain,option=""){
   return(gp)
 }
 
-gp.plsa<-function(gp,Z,maxiter,tol){
-  n<-dim(gp$xtrain)[1]
-  d<-dim(gp$xtrain)[2]
+plsa<-function(X,Z,maxiter,tol){
+  n<-dim(X)[1]
+  d<-dim(X)[2]
   pxy<-matrix(0,nrow=n,ncol=d)
   pxgz<-matrix(0,nrow=n,ncol=Z)
   pygz<-matrix(0,nrow=d,ncol=Z)
   pz<-rep(0,Z)
-  Fun<-.C("plsa",as.double(gp$xtrain),as.integer(n),as.integer(d),as.integer(Z),as.integer(maxiter),as.double(tol),pxy=as.double(pxy),pygz=as.double(pygz),pxgz=as.double(pxgz),pz=as.double(pz))    
+  Fun<-.C("plsa",as.double(X),as.integer(n),as.integer(d),as.integer(Z),as.integer(maxiter),as.double(tol),pxy=as.double(pxy),pygz=as.double(pygz),pxgz=as.double(pxgz),pz=as.double(pz))    
   pxy<-matrix(Fun$pxy,,nrow=n,ncol=d)
   pxgz<-matrix(Fun$pxgz,nrow=n,ncol=Z)
   pygz<-matrix(Fun$pygz,nrow=d,ncol=Z) 
