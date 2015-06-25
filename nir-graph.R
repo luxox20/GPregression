@@ -1,0 +1,19 @@
+library(ggplot2)
+concatenate<-function(file_name,data){
+    tmp<-read.table(file=file_name,header=T)
+    ind<-paste(tmp[,3])!="-"
+    tmp$file_name<-file_name
+    colnames(tmp)<-c("Wavelength","Wavenumbers","spectrum","file_name")
+    data<-rbind(data,tmp[ind,])
+}
+
+data<-data.frame()
+data<-concatenate("../data/DAT/a-16421.dat",data)
+data<-concatenate("../data/DAT/a-16430.dat",data)
+data<-concatenate("../data/DAT/a-16620.dat",data)
+data<-concatenate("../data/DAT/b-a19-5.dat",data)
+data<-concatenate("../data/DAT/b-16825.dat",data)
+data<-concatenate("../data/DAT/b-a39-4.dat",data)
+data$spectrum<-as.numeric(paste(data$spectrum))
+spectrum<-ggplot(data,aes(x=Wavelength,y=spectrum,colour=file_name))+geom_line()
+#ggsave(spectrum,file="spectrum.png")
