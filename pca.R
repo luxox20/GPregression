@@ -42,12 +42,64 @@ gp.plsa<-function(X,y,K,Xtest){
   N<-dim(X)[1]
   T<-dim(Xtest)[1]
   D<-dim(X)[2]
-  plsa<-plsa(X,K,1e4,1e-6)
+  #X<-diag(1/rowSums(X))%*%X
+  plsa<-plsa(X,K,1e3,1e-6)
+  plsa.test<-plsa(Xtest,K,1e3,1e-6)
   fit<-gp.init(plsa$pxgz,y)
   fit<-gp.hmc(fit,20000,5,5000)
-  test<-matrix(0,T,K)
-  for(i in 1:T) test[i,]<-t(Xtest[i,])%*%plsa$pygz
+  test_pxgz<-matrix(runif(T*K),T,K)
+  qzgxy <- array(rep(0, K*T*D), dim=c(T,D,K))
+  for(z in 1:K){
+    qzgxy[,,z]=test_pxgz[,z]%*%t(plsa$pygz[,z])*plsa$pz[z]
+  }
+  qzgxy=qzgxy/sum(qzgxy);
+  for(z in 1:K){
+    test_pxgz[,z]=rowSums(Xtest*qzgxy[,,z]);
+  }
+  #test_pxgz=test_pxgz/sum(test_pxgz);
+  #for(i in 1:T) test_pxgz[i,]<-t(Xtest[i,])%*%ginv(t(plsa$pygz)*plsa$pz)
   pred.train<-gp.pred(fit,plsa$pxgz)$mean
-  pred.test<-gp.pred(fit,test)$mean
+  pred.test<-gp.pred(fit,test_pxgz)$mean
   return(list(y_train=pred.train,y_test=pred.test))
+}
+
+
+pca.r2<-function(y,y.pred){
+  tss<-sum((y-mean(y))^2)
+  rss=sum((y-y.pred)^2)
+  return(1-rss/tss)
+}
+
+pca.r2.test<-function(y,y_test,y.pred){
+  tss<-sum((y-mean(y))^2)
+  rss=sum((y_test-y.pred)^2)
+  return(1-rss/tss)
+}
+
+pca.rmse<-function(y,y.pred){
+  rss=sum((y-y.pred)^2)
+  return(sqrt(rss/length(y)))
+}
+
+pca.rpd<-function(y,y.pred){
+  r2<-pca.r2(y,y.pred)
+  return((1-r2)^-2)
+}
+
+rdirichlet <- function(a) {
+  y <- rgamma(length(a), a, 1)
+  return(y / sum(y))
+}
+
+gen.plsa<-function(x,y,z){
+  require(MASS)
+  pz<-runif(z)
+  pz<-pz/sum(pz)
+  pxgz<-matrix(runif(x*z),x,z)
+  pxgz %*% diag(1/colSums(pxgz))
+  pygz<-matrix(runif(y*z),y,z)
+  pygz %*% diag(1/colSums(pygz))
+  pxy<-matrix(0,x,y)
+  for(i in 1:z) pxy<-pxy+pxgz[,z]%*%t(pygz[,z])*pz[z]
+  return(pxy)
 }
