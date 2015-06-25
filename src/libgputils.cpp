@@ -23,6 +23,21 @@ extern "C"{
     memcpy(pygz,p.get_pygz().data(),p.get_pygz().rows()*p.get_pygz().cols()*sizeof(double));
     memcpy(pz,p.get_pz().data(),p.get_pz().size()*sizeof(double));
   }
+  //no se puede hacer sobrecarga
+  void plsa_with_test(double* _pxy,int* Xnrow,int* Xncol,int* Z,int* maxIter,double* tol,double* tpxy,double* pygz,double* pxgz,double* pz,double *test,int *testXnRows,int *testXnCols,double *test_result){
+    PLSA p;
+    Map<MatrixXd>pxy(_pxy,*Xnrow,*Xncol);
+    Map<MatrixXd>xtest(test,*testXnRows,*testXnCols);
+    MatrixXd test_r;
+    p.plsa(pxy,*Z,*maxIter,*tol);
+    test_r=p.test(xtest,*maxIter,*tol);
+    memcpy(tpxy,p.get_tpxy().data(),p.get_tpxy().rows()*p.get_tpxy().cols()*sizeof(double));
+    memcpy(pxgz,p.get_pxgz().data(),p.get_pxgz().rows()*p.get_pxgz().cols()*sizeof(double));
+    memcpy(pygz,p.get_pygz().data(),p.get_pygz().rows()*p.get_pygz().cols()*sizeof(double));
+    memcpy(pz,p.get_pz().data(),p.get_pz().size()*sizeof(double));
+    memcpy(test_result,test_r.data(),test_r.rows()*test_r.cols()*sizeof(double));
+  }
+
   
   void squared_exponential(double* XData, int* Xnrow, int* Xncol,double* Ydata, int* Ynrow, int* Yncol,double* sigma_f, double* nu, int* dim, double* result){
 	  Map<MatrixXd>X(XData,*Xnrow,*Xncol);

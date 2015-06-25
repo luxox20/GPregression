@@ -23,6 +23,7 @@ class PLSA{
 		MatrixXd get_pygz(void){return tpygz;};
 		MatrixXd get_tpxy(void){return tpxy;};
 		VectorXd get_pz(void){return tpz;};
+		MatrixXd test(Map<MatrixXd>& xtest, int iter,int tol);
 		double max_error_coeff(const MatrixXd& mat,const MatrixXd& mat2);
 		double mean_error(const MatrixXd& mat,const MatrixXd& mat2);	
 	private:

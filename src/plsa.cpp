@@ -88,3 +88,35 @@ void PLSA::plsa(Map<MatrixXd>& pxy,int Z,int maxIter,double tol){
 			break;					
 	}
 }
+
+
+MatrixXd PLSA::test(Map<MatrixXd>& xtest, int iter,int tol){
+
+	map<int,MatrixXd> qzgxy;
+	MatrixXd ttpxgz,ttpxy;
+	int Z=tpxgz.cols();
+	double loglikehood=0,loglikehood_ante=0;
+
+	MatrixXd sum_qzgxy;
+	ttpxgz=MatrixXd::Random(xtest.rows(),Z);
+	ttpxgz=ttpxgz.cwiseAbs();
+	normalize(ttpxgz);
+
+	for(int i=0;i<iter;i++){
+		sum_qzgxy=MatrixXd::Zero(xtest.rows(),xtest.cols());
+		for(int z=0;z<Z;z++){
+			qzgxy[z]=(((ttpxgz.col(z)*tpygz.col(z).transpose())*tpz(z)).array()+std::numeric_limits<double>::epsilon()).matrix();
+			qzgxy[z]=qzgxy[z]*(1.0/(qzgxy[z].sum()));
+			sum_qzgxy+=qzgxy[z];
+		}
+		normalize(qzgxy,sum_qzgxy);
+		for(int z=0;z<Z;z++){
+			ttpxgz.col(z)=(qzgxy[z].cwiseProduct(xtest)).rowwise().sum();
+		}
+		normalize(ttpxgz);
+		if(mean_error(ttpxgz,tpxgz)<tol)
+			break;
+	}
+	qzgxy.clear();
+	return ttpxgz;
+}
