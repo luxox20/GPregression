@@ -123,8 +123,7 @@ gp.optim <-function(gp){
   } 
   Grad = function(para){
     gp<-gp.setparams(gp,para)
-    #grad<-gp.grad(gp)
-    grad<-grad(Linn,gp.getparams(gp))
+    grad<-gp.grad(gp)
     return(grad)
   }
   (est = optim(init.par, Linn, gr=Grad, method="BFGS", hessian=FALSE))

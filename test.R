@@ -1,6 +1,6 @@
 rm(list=ls())
-source("GP.R")
 library("numDeriv")
+source("GP.R")
 n=100
 p=5
 X=matrix(rnorm(n*p),ncol=p)
@@ -16,12 +16,11 @@ Linn = function(para){
     fit <-gp.loglike(gp)      
     return(-fit)
   }
-#print("numerical derivative:")
-#print(grad(Linn,gp.getparams(gp)))
-#print("exact derivative:")
-#print(gp.grad(gp))
-#Ñ!
-gp.mc<-gp.hmc(gp,niter=10000,leapfrog=3,5000)
+print("numerical derivative:")
+print(grad(Linn,gp.getparams(gp)))
+print("exact derivative:")
+print(gp.grad(gp))
+gp.mc<-gp.hmc(gp,niter=1000,leapfrog=3,500)
 pred.mc<-gp.pred(gp.mc,X)
 rmse<-sum((y-pred.mc$mean)^2)/n
 cat("HMC : ",rmse,"\n")
