@@ -46,7 +46,7 @@ extern "C"{
     for(int i=0; i < *Xnrow; ++i){      
       for(int j=i; j < *Xnrow; ++j){
         VectorXd d=(X.row(i)-X.row(j));
-        double S=(nu_vector.array().exp()*d.array().pow(2)).sum();
+        double S=(nu_vector.array()*d.array().pow(2)).sum();
         Cov(i,j) =  exp(*sigma_f - 0.5 * S);
       }
     }
@@ -64,7 +64,7 @@ extern "C"{
         double S=0;
         for(int k=0;k<*Xncol;++k){
 				  double d=(X(i,k)-Y(j,k));
-          S+=exp(nu[k])*d;
+          S+=nu[k]*pow(d,2.0);
 				}
         Cov(i,j) =  exp(*sigma_f - 0.5 * S);
 			}
