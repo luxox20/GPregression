@@ -60,10 +60,13 @@ extern "C"{
     MatrixXd Cov;
     Cov.resize(*Xnrow,*Ynrow);
 		for(int i=0; i < *Xnrow; ++i){			
-			for(int j=i; j < *Ynrow; ++j){
-				VectorXd d=(X.row(i)-Y.row(j));
-        double S=(nu_vector.array().exp()*d.array().pow(2)).sum();
-				Cov(i,j) =  exp(*sigma_f - 0.5 * S);
+			for(int j=0; j < *Ynrow; ++j){
+        double S=0;
+        for(int k=0;k<*Xncol;++k){
+				  double d=(X(i,k)-Y(j,k));
+          S+=exp(nu[k])*d;
+				}
+        Cov(i,j) =  exp(*sigma_f - 0.5 * S);
 			}
 		}
     memcpy(result,Cov.data(),Cov.size() * sizeof(double));
