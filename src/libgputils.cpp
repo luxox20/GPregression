@@ -48,7 +48,7 @@ extern "C"{
         double S=0;
         for(int k=0;k<*Xncol;++k){
           double d=(X(i,k)-X(j,k));
-          S+=nu[k]*pow(d,2.0);
+          S+=exp(nu[k])*pow(d,2.0);
         }
         Cov(i,j) =  exp(*sigma_f - 0.5 * S);
         Cov(j,i) = Cov(i,j);
@@ -71,7 +71,7 @@ extern "C"{
         double S=0;
         for(int k=0;k<*Xncol;++k){
 				  double d=(X(i,k)-Y(j,k));
-          S+=nu[k]*pow(d,2.0);
+          S+=exp(nu[k])*pow(d,2.0);
 				}
         Cov(i,j) =  exp(*sigma_f - 0.5 * S);
 			}
@@ -122,9 +122,12 @@ void log_likelihood(double* Kxxdata, int* Kxxnrow, int* Kxxncol,double* Ydata, i
     MatrixXd Sigma=Kxx+(numeric_limits<double>::min()+exp(*sigma_y))*MatrixXd::Identity(*Kxxnrow,*Kxxncol);
     Sigma+=bias_mat;
     LLT<MatrixXd> Chol(Sigma);
-		double loglike = -.5*Y.transpose()*Chol.solve(Y);
-		loglike += -0.5*log(Sigma.determinant())-(0.5* *Ynrow * log(2*M_PI));			
-		result[0] = loglike;
+		MatrixXd L = Chol.matrixL().transpose();
+    ArrayXd diag=L.diagonal().array()+numeric_limits<double>::min();
+    double loglike = -.5*Y.transpose()*Chol.solve(Y);
+		loglike += -(0.5* *Ynrow * log(2*M_PI));			
+		loglike += -diag.log().sum() ;      
+    result[0] = loglike;
 	}
 
   void gp_grad(double* XData,int* Xnrow,int* Xncol,double* YData,int* Ynrow,int* Yncol,double* KxxData,int* Kxxnrow,int* Kxxncol,double* sigma_f,double* sigma_y,double* bias,double* nu,double* resultado_grad){
