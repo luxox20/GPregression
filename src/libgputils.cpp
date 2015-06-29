@@ -43,12 +43,19 @@ extern "C"{
     Map<VectorXd>nu_vector(nu,*Xncol);
     MatrixXd Cov;
     Cov.resize(*Xnrow,*Xnrow);
-    for(int i=0; i < *Xnrow; ++i){      
-      for(int j=i; j < *Xnrow; ++j){
-        VectorXd d=(X.row(i)-X.row(j));
-        double S=(nu_vector.array()*d.array().pow(2)).sum();
+    for(int i=0; i < (*Xnrow-1); ++i){      
+      for(int j=i+1; j < *Xnrow; ++j){
+        double S=0;
+        for(int k=0;k<*Xncol;++k){
+          double d=(X(i,k)-X(j,k));
+          S+=nu[k]*pow(d,2.0);
+        }
         Cov(i,j) =  exp(*sigma_f - 0.5 * S);
+        Cov(j,i) = Cov(i,j);
       }
+    }
+    for(int i=0;i<*Xnrow;++i){
+        Cov(i,i) =  exp(*sigma_f);
     }
     memcpy(result,Cov.data(),Cov.size() * sizeof(double));
   } 
@@ -115,9 +122,9 @@ void log_likelihood(double* Kxxdata, int* Kxxnrow, int* Kxxncol,double* Ydata, i
     MatrixXd Sigma=Kxx+(numeric_limits<double>::min()+exp(*sigma_y))*MatrixXd::Identity(*Kxxnrow,*Kxxncol);
     Sigma+=bias_mat;
     LLT<MatrixXd> Chol(Sigma);
-		ArrayXd loglike = -.5*Y.transpose()*Chol.solve(Y);
+		double loglike = -.5*Y.transpose()*Chol.solve(Y);
 		loglike += -0.5*log(Sigma.determinant())-(0.5* *Ynrow * log(2*M_PI));			
-		result[0] = loglike[0];
+		result[0] = loglike;
 	}
 
   void gp_grad(double* XData,int* Xnrow,int* Xncol,double* YData,int* Ynrow,int* Yncol,double* KxxData,int* Kxxnrow,int* Kxxncol,double* sigma_f,double* sigma_y,double* bias,double* nu,double* resultado_grad){
@@ -133,6 +140,7 @@ void log_likelihood(double* Kxxdata, int* Kxxnrow, int* Kxxncol,double* Ydata, i
     LLT<MatrixXd> Chol(Sigma);
     VectorXd cninvt=Chol.solve(Y);
     VectorXd grad=VectorXd::Zero(3+*Xncol);
+    VectorXd prior=VectorXd::Ones(3+*Xncol);
     // v0 gradiente
     double g_sigma_f = (invSigma*Kxx).trace() - (cninvt.transpose())*Kxx*cninvt;      
     double g_bias = (invSigma*bias_mat).trace() - (cninvt.transpose())*bias_mat*cninvt;
@@ -153,8 +161,9 @@ void log_likelihood(double* Kxxdata, int* Kxxnrow, int* Kxxncol,double* Ydata, i
       dmat=-0.5*exp(nu_vec(l))*Kxx.cwiseProduct(matx);
       g_nu(l) = (invSigma*dmat).trace() - (cninvt.transpose())*dmat*cninvt;
     }
+    prior *= nu_vec.squaredNorm();
     grad << g_sigma_f,g_sigma_y,g_bias,g_nu;
-    grad = 0.5*grad;
+    grad =0.5*grad+0.5*prior;
     memcpy(resultado_grad,grad.data(),grad.size()*sizeof(double));
   }
   
@@ -180,7 +189,7 @@ void log_likelihood(double* Kxxdata, int* Kxxnrow, int* Kxxncol,double* Ydata, i
       for(int p=0;p<(*param_dim);p++) {
         p0(p) = rnormal(generator);
       }
-      squared_exponential(XData,Xnrow,Xncol,XData,Xnrow,Xncol,&x0(0),x0.tail(*Xncol).data(),Xncol,KxxData);
+      squared_exponential_train(XData,Xnrow,Xncol,&x0(0),x0.tail(*Xncol).data(),Xncol,KxxData);
       log_likelihood(KxxData,Kxxnrow,Kxxncol,YData,Ynrow,&x0(0),&x0(1),&x0(2),&ll_0);
       double K0 = p0.cwiseProduct(p0).sum()*0.5;
       gp_grad(XData,Xnrow,Xncol,YData,Ynrow,Yncol,KxxData,Kxxnrow,Kxxncol,&x0(0),&x0(1),&x0(2),x0.tail(*Xncol).data(),&resultado_grad[0]);
@@ -190,13 +199,13 @@ void log_likelihood(double* Kxxdata, int* Kxxnrow, int* Kxxncol,double* Ydata, i
       pstar = p0 - (delta/2)*grad;
       xstar = x0 + delta*pstar;
       for(int j=1;j<=(*leapfrog-1);j++){
-          squared_exponential(XData,Xnrow,Xncol,XData,Xnrow,Xncol,&xstar(0),xstar.tail(*Xncol).data(),Xncol,KxxData);    
+          squared_exponential_train(XData,Xnrow,Xncol,&xstar(0),xstar.tail(*Xncol).data(),Xncol,KxxData);    
           gp_grad(XData,Xnrow,Xncol,YData,Ynrow,Yncol,KxxData,Kxxnrow,Kxxncol,&xstar(0),&xstar(1),&xstar(2),xstar.tail(*Xncol).data(),&resultado_grad[0]);         
           Map<VectorXd>leap_grad(&resultado_grad[0],*param_dim);           
           pstar.noalias() -=  delta*leap_grad;
           xstar.noalias() +=  delta*pstar;
       }             
-      squared_exponential(XData,Xnrow,Xncol,XData,Xnrow,Xncol,&xstar(0),xstar.tail(*Xncol).data(),Xncol,KxxData); 
+      squared_exponential_train(XData,Xnrow,Xncol,&xstar(0),xstar.tail(*Xncol).data(),Xncol,KxxData); 
       log_likelihood(KxxData,Kxxnrow,Kxxncol,YData,Ynrow,&xstar(0),&xstar(1),&xstar(2),&ll_star);
       double KStar = pstar.cwiseProduct(pstar).sum()*0.5;
       double alpha = min(1.0,exp((ll_star+KStar)-(ll_0+K0)));     

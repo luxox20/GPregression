@@ -49,7 +49,7 @@ PLSA::PLSA(Map<MatrixXd>& pxy,int Z,int maxIter,double tol){
 
 void PLSA::plsa(Map<MatrixXd>& pxy,int Z,int maxIter,double tol){
 	int X,Y;
-	double loglikehood=0,loglikehood_ante=0;
+	double loglikehood=0;
 	map<int,MatrixXd> qzgxy;
 	X=pxy.rows();
 	Y=pxy.cols();
@@ -61,7 +61,7 @@ void PLSA::plsa(Map<MatrixXd>& pxy,int Z,int maxIter,double tol){
 		for(int z=0;z<Z;z++)
 			tpxy+=(tpxgz.col(z)*tpygz.col(z).transpose())*tpz(z);
 		
-		loglikehood_ante=loglikehood;
+		double loglikehood_ante=loglikehood;
 		loglikehood=logeps(tpxy).cwiseProduct(pxy).sum();
 		//E-step
 		{
@@ -95,8 +95,6 @@ MatrixXd PLSA::test(Map<MatrixXd>& xtest, int iter,int tol){
 	map<int,MatrixXd> qzgxy;
 	MatrixXd ttpxgz,ttpxy;
 	int Z=tpxgz.cols();
-	double loglikehood=0,loglikehood_ante=0;
-
 	MatrixXd sum_qzgxy;
 	ttpxgz=MatrixXd::Random(xtest.rows(),Z);
 	ttpxgz=ttpxgz.cwiseAbs();
