@@ -24,6 +24,7 @@ class PLSA{
 		MatrixXd get_tpxy(void){return tpxy;};
 		VectorXd get_pz(void){return tpz;};
 		MatrixXd test(Map<MatrixXd>& xtest, int iter,int tol);
+		MatrixXd test_inv(MatrixXd& xtest);
 		double max_error_coeff(const MatrixXd& mat,const MatrixXd& mat2);
 		double mean_error(const MatrixXd& mat,const MatrixXd& mat2);	
 	private:
@@ -35,4 +36,5 @@ class PLSA{
 		void normalize(map<int,MatrixXd>& matd,MatrixXd& mat);
 		void normalize(MatrixXd& mat);
 		void init(int X,int Y,int Z);
+		MatrixXd pseudo_inverse(const Ref<const MatrixXd> &mat);
 };
