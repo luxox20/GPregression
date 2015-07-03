@@ -136,14 +136,14 @@ void log_likelihood(double* Kxxdata, int* Kxxnrow, int* Kxxncol,double* Ydata, i
     Map<VectorXd>Y(YData,*Ynrow,*Yncol);
     Map<VectorXd>nu_vec(nu,*Xncol);
     MatrixXd unos = MatrixXd::Ones(*Kxxnrow,*Kxxncol);
-    MatrixXd bias_mat = exp(*bias)*unos;
+    MatrixXd bias_mat = exp(*bias)*unos;  
     MatrixXd Sigma=Kxx+(numeric_limits<double>::min()+exp(*sigma_y))*MatrixXd::Identity(*Kxxnrow,*Kxxncol);
     Sigma+=bias_mat;
     MatrixXd invSigma=Sigma.inverse();
     LLT<MatrixXd> Chol(Sigma);
     VectorXd cninvt=Chol.solve(Y);
     VectorXd grad=VectorXd::Zero(3+*Xncol);
-    VectorXd prior=VectorXd::Ones(3+*Xncol);
+    VectorXd prior=nu_vec;
     // v0 gradiente
     double g_sigma_f = (invSigma*Kxx).trace() - (cninvt.transpose())*Kxx*cninvt;      
     double g_bias = (invSigma*bias_mat).trace() - (cninvt.transpose())*bias_mat*cninvt;
@@ -164,9 +164,8 @@ void log_likelihood(double* Kxxdata, int* Kxxnrow, int* Kxxncol,double* Ydata, i
       dmat=-0.5*exp(nu_vec(l))*Kxx.cwiseProduct(matx);
       g_nu(l) = (invSigma*dmat).trace() - (cninvt.transpose())*dmat*cninvt;
     }
-    prior *= nu_vec.squaredNorm();
     grad << g_sigma_f,g_sigma_y,g_bias,g_nu;
-    grad =0.5*grad+0.5*prior;
+    grad.noalias() =0.5*grad;
     memcpy(resultado_grad,grad.data(),grad.size()*sizeof(double));
   }
   

@@ -105,7 +105,7 @@ gp.loglike<-function(gp){
 	Fun<-.C("log_likelihood",as.double(Kxx),
         as.integer(nkxx[1]),as.integer(nkxx[2]),
         as.double(gp$ytrain),as.integer(nyt[1]),as.double(gp$sigma_f),as.double(gp$sigma_y),as.double(gp$bias),ll=as.double(ll))
-    ll=Fun$ll#+gp.prior(gp)
+    ll=Fun$ll+gp.prior(gp)
 	return(as.numeric(ll))	
 }
 
@@ -126,7 +126,7 @@ gp.optim <-function(gp){
     grad<-gp.grad(gp)
     return(grad)
   }
-  (est = optim(init.par, Linn, gr=Grad, method="BFGS", hessian=FALSE))
+  (est = optim(init.par, Linn, gr=Grad, method="BFGS", hessian=TRUE))
   gp$sigma_f<-est$par[1]
   gp$sigma_y<-est$par[2]
   gp$bias<-est$par[3]
@@ -134,7 +134,6 @@ gp.optim <-function(gp){
   return(gp)
 }
 
-#gp.hmc <-function(gp,niter=1000,leapfrog=10,burnin=500)
 gp.hmc<-function(gp,niter,leapfrog,burnin){
     Kxx<-gp.covar(gp,gp$xtrain,gp$xtrain) #covf
     init.par<-gp.getparams(gp)
@@ -143,7 +142,6 @@ gp.hmc<-function(gp,niter,leapfrog,burnin){
     Fun <- .C("gp_hmc",as.integer(niter),as.integer(leapfrog),as.integer(burnin),as.double(Kxx),as.integer(dim(Kxx)[1]),as.integer(dim(Kxx)[2]),as.double(gp$xtrain),as.integer(dim(gp$xtrain)[1]),as.integer(dim(gp$xtrain)[2]),as.double(gp$ytrain),as.integer(dim(gp$ytrain)[1]),as.integer(dim(gp$ytrain)[2]),as.double(init.par),as.integer(length(init.par)),samples=as.double(samples),rate=as.integer(rate));
     rate <- as.integer(Fun$rate);  
     samples <- matrix(Fun$samples,nrow=niter,ncol=length(init.par));
-    #samples <- matrix(Fun$samples,nrow=5,ncol=length(init.par));
     cat('Acceptance Rate : ',    100*rate/niter,'%\n')
     post.par<-rep(0,length(init.par))
     post.par<-colMeans(samples[-1:-burnin,])
@@ -155,11 +153,11 @@ gp.hmc<-function(gp,niter,leapfrog,burnin){
 gp.grad<-function(gp){
 	n<-dim(gp$xtrain)[1]
 	d<-dim(gp$xtrain)[2]
-    Kxx<-gp.covar(gp,gp$xtrain,gp$xtrain);
-    grad <- rep(0,3+d)
-    Fun <- .C("gp_grad",as.double(gp$xtrain),as.integer(n),as.integer(d),as.double(gp$ytrain),as.integer(dim(gp$ytrain)[1]),as.integer(dim(gp$ytrain)[2]),as.double(Kxx),as.integer(dim(Kxx)[1]),as.integer(dim(Kxx)[2]),as.double(gp$f_par),as.double(gp$sigma_y),as.double(gp$bias),as.double(gp$nu),grad=as.double(grad));
-    grad <- as.vector(Fun$grad)
-    return(grad)
+  Kxx<-gp.covar(gp,gp$xtrain,gp$xtrain);
+  grad <- rep(0,3+d)
+  Fun <- .C("gp_grad",as.double(gp$xtrain),as.integer(n),as.integer(d),as.double(gp$ytrain),as.integer(dim(gp$ytrain)[1]),as.integer(dim(gp$ytrain)[2]),as.double(Kxx),as.integer(dim(Kxx)[1]),as.integer(dim(Kxx)[2]),as.double(gp$f_par),as.double(gp$sigma_y),as.double(gp$bias),as.double(gp$nu),grad=as.double(grad));
+  grad <- as.vector(Fun$grad)
+  return(grad)
 }
 
 gp.getparams<-function(gp){

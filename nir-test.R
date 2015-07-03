@@ -6,7 +6,7 @@ source("GP.R")
 data("gasoline")
 
 # PLS, KPLS
-Z<-5
+Z<-12
 idx<-1:50
 X<-gasoline$NIR[idx,]
 y<-gasoline$octane[idx]
@@ -45,5 +45,4 @@ train.dat <- data.frame(set=rep("train",ntrain*3),method = rep(c("GP", "KPLS","P
 #pp<-pp+geom_smooth(method=lm)+facet_grid(. ~ method)
 #ggsave(file="gasoline_train.pdf",plot=pp,scale=2)
 
-plot(train.dat$reference,train.dat$prediction,
-pch=21,col=train.dat$method)
+plot(train.dat$reference,train.dat$prediction,pch=21,col=train.dat$method)

@@ -29,8 +29,8 @@ gp.pca<-function(X,y,K,Xtest){
   D<-dim(X)[2]
   comp<-pca(X,K)
   fit<-gp.init(comp$rotations,y)
-  fit<-gp.optim(fit)
-  #fit<-gp.hmc(fit,5000,0,100)
+  #fit<-gp.optim(fit)
+  fit<-gp.hmc(fit,5000,0,100)
   test<-matrix(0,T,K)
   for(i in 1:T) test[i,]<-t(Xtest[i,]-comp$center)%*%comp$loadings
   pred.train<-gp.pred(fit,comp$rotations)$mean
