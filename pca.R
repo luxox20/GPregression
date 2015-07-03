@@ -29,7 +29,8 @@ gp.pca<-function(X,y,K,Xtest){
   D<-dim(X)[2]
   comp<-pca(X,K)
   fit<-gp.init(comp$rotations,y)
-  fit<-gp.hmc(fit,20000,5,5000)
+  fit<-gp.optim(fit)
+  #fit<-gp.hmc(fit,5000,0,100)
   test<-matrix(0,T,K)
   for(i in 1:T) test[i,]<-t(Xtest[i,]-comp$center)%*%comp$loadings
   pred.train<-gp.pred(fit,comp$rotations)$mean
@@ -39,14 +40,13 @@ gp.pca<-function(X,y,K,Xtest){
 
 gp.plsa<-function(X,y,K,Xtest){
   source("GP.R")
+  require("MASS")
   N<-dim(X)[1]
   T<-dim(Xtest)[1]
   D<-dim(X)[2]
-  #X<-diag(1/rowSums(X))%*%X
   plsa<-plsa(X,K,1e3,1e-6)
-  plsa.test<-plsa(Xtest,K,1e3,1e-6)
   fit<-gp.init(plsa$pxgz,y)
-  fit<-gp.hmc(fit,20000,5,5000)
+  fit<-gp.hmc(fit,1000,1,100)
   test_pxgz<-matrix(runif(T*K),T,K)
   qzgxy <- array(rep(0, K*T*D), dim=c(T,D,K))
   for(z in 1:K){
@@ -56,7 +56,7 @@ gp.plsa<-function(X,y,K,Xtest){
   for(z in 1:K){
     test_pxgz[,z]=rowSums(Xtest*qzgxy[,,z]);
   }
-  #test_pxgz=test_pxgz/sum(test_pxgz);
+  test_pxgz=test_pxgz/sum(test_pxgz);
   #for(i in 1:T) test_pxgz[i,]<-t(Xtest[i,])%*%ginv(t(plsa$pygz)*plsa$pz)
   pred.train<-gp.pred(fit,plsa$pxgz)$mean
   pred.test<-gp.pred(fit,test_pxgz)$mean
