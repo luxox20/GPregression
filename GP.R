@@ -36,6 +36,23 @@ plsa<-function(X,Z,maxiter,tol){
   return(list(pxy=pxy,pxgz=pxgz,pygz=pygz,pz=Fun$pz))
 }
 
+plsa.test<-function(X,Xtest,Z,maxiter,tol){
+  n<-dim(X)[1]
+  ntest<-dim(Xtest)[1]
+  d<-dim(X)[2]
+  pxy<-matrix(0,nrow=n,ncol=d)
+  pxgz<-matrix(0,nrow=n,ncol=Z)
+  pxgz_test<-matrix(0,nrow=ntest,ncol=Z)
+  pygz<-matrix(0,nrow=d,ncol=Z)
+  pz<-rep(0,Z)
+  Fun<-.C("plsa_with_test",as.double(X),as.integer(n),as.integer(d),as.integer(Z),as.integer(maxiter),as.double(tol),pxy=as.double(pxy),pygz=as.double(pygz),pxgz=as.double(pxgz),pz=as.double(pz),as.double(Xtest),as.integer(ntest),as.integer(d),pxgz_test=as.double(pxgz_test))    
+  pxy<-matrix(Fun$pxy,,nrow=n,ncol=d)
+  pxgz<-matrix(Fun$pxgz,nrow=n,ncol=Z)
+  pxgz_test<-matrix(Fun$pxgz_test,nrow=ntest,ncol=Z)
+  pygz<-matrix(Fun$pygz,nrow=d,ncol=Z) 
+  return(list(pxy=pxy,pxgz=pxgz,pygz=pygz,pz=Fun$pz,pxgz_test=pxgz_test))
+}
+
 gp.setdata<-function(gp,xtrain,ytrain){
   #yy<-gp.scale(ytrain)
   #ytrain<-yy$dato

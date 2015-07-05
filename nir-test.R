@@ -9,6 +9,7 @@ data("gasoline")
 Z<-12
 idx<-1:50
 X<-gasoline$NIR[idx,]
+X[X<0]<-0
 y<-gasoline$octane[idx]
 Xtest<-gasoline$NIR[-idx,]
 ytest<-gasoline$octane[-idx]
@@ -18,7 +19,7 @@ gas.kpls <- plsr(y~X,Z,method = "kernelpls")
 y.pls<-predict(gas.pls,newdata=Xtest,comp=Z)
 y.kpls<-predict(gas.kpls,newdata=Xtest,comp=Z)
 
-pred<-gp.pca(X,y,Z,Xtest)
+pred<-gp.plsa(X,y,Z,Xtest)
 
 rms.gp<-list(train=pca.rmse(y,pred$y_train),test=pca.rmse(ytest,pred$y_test))
 rms.pls<-list(train=pca.rmse(y,gas.pls$fitted.values[,,Z]),test=pca.rmse(ytest,y.pls))
@@ -30,7 +31,6 @@ r2.kpls<-list(train=pca.r2(y,gas.kpls$fitted.values[,,Z]),test=pca.r2.test(y,yte
 
 
 print(cbind(rms.gp,rms.kpls,rms.pls))
-
 print(cbind(r2.gp,r2.kpls,r2.pls))
 
 ntest<-length(ytest)
@@ -46,3 +46,9 @@ train.dat <- data.frame(set=rep("train",ntrain*3),method = rep(c("GP", "KPLS","P
 #ggsave(file="gasoline_train.pdf",plot=pp,scale=2)
 
 plot(train.dat$reference,train.dat$prediction,pch=21,col=train.dat$method)
+
+comp<-plsa(X,100,1e2,1e-6)
+plot(X[1,],type="l")
+lines(1:401,comp$pxy[1,])
+pxy<-matrix(rep(0,ntrain*401),nrow=50,ncol=401)
+for (i in 1:length(comp$pz)) pxy<-pxy+comp$pxgz[,i]%*%t(comp$pygz[,i])*comp$pz[i]

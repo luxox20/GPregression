@@ -119,16 +119,16 @@ MatrixXd PLSA::test(Map<MatrixXd>& xtest, int iter,int tol){
 	return ttpxgz;
 }
 
-MatrixXd PLSA::pseudo_inverse(const Ref<const MatrixXd> &mat){
-	if(mat.rows()>mat.cols()){
-		return (mat.transpose()*mat).inverse()*mat.transpose();
-	}else{
-		return (mat.transpose()*(mat*mat.transpose()).inverse());
-	}
-}
+//MatrixXd PLSA::pseudo_inverse(const Ref<const MatrixXd> &mat){
+	//if(mat.rows()>mat.cols()){
+		//return (mat.transpose()*mat).inverse()*mat.transpose();
+	//}else{
+		//return (mat.transpose()*(mat*mat.transpose()).inverse());
+	//}
+//}
 
-MatrixXd PLSA::test_inv(MatrixXd& xtest){
+//MatrixXd PLSA::test_inv(MatrixXd& xtest){
 
-	return xtest*pseudo_inverse(tpygz.transpose());
+	//return xtest*pseudo_inverse(tpygz.transpose());
 	
-}
+//}

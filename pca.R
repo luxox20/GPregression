@@ -44,22 +44,12 @@ gp.plsa<-function(X,y,K,Xtest){
   N<-dim(X)[1]
   T<-dim(Xtest)[1]
   D<-dim(X)[2]
-  plsa<-plsa(X,K,1e3,1e-6)
+  plsa<-plsa.test(X,Xtest,K,1e2,1e-6)
   fit<-gp.init(plsa$pxgz,y)
-  fit<-gp.hmc(fit,1000,1,100)
+  fit<-gp.hmc(fit,10000,10,5000)
   test_pxgz<-matrix(runif(T*K),T,K)
-  qzgxy <- array(rep(0, K*T*D), dim=c(T,D,K))
-  for(z in 1:K){
-    qzgxy[,,z]=test_pxgz[,z]%*%t(plsa$pygz[,z])*plsa$pz[z]
-  }
-  qzgxy=qzgxy/sum(qzgxy);
-  for(z in 1:K){
-    test_pxgz[,z]=rowSums(Xtest*qzgxy[,,z]);
-  }
-  test_pxgz=test_pxgz/sum(test_pxgz);
-  #for(i in 1:T) test_pxgz[i,]<-t(Xtest[i,])%*%ginv(t(plsa$pygz)*plsa$pz)
   pred.train<-gp.pred(fit,plsa$pxgz)$mean
-  pred.test<-gp.pred(fit,test_pxgz)$mean
+  pred.test<-gp.pred(fit,plsa$pxgz_test)$mean
   return(list(y_train=pred.train,y_test=pred.test))
 }
 

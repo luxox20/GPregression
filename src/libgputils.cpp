@@ -61,21 +61,21 @@ extern "C"{
   } 
 
   void squared_exponential(double* XData, int* Xnrow, int* Xncol,double* Ydata, int* Ynrow, int* Yncol,double* sigma_f, double* nu, int* dim, double* result){
-	  Map<MatrixXd>X(XData,*Xnrow,*Xncol);
-	  Map<MatrixXd>Y(Ydata,*Ynrow, *Yncol);
+	Map<MatrixXd>X(XData,*Xnrow,*Xncol);
+	Map<MatrixXd>Y(Ydata,*Ynrow, *Yncol);
     Map<VectorXd>nu_vector(nu,*Xncol);
     MatrixXd Cov;
     Cov.resize(*Xnrow,*Ynrow);
 		for(int i=0; i < *Xnrow; ++i){			
 			for(int j=0; j < *Ynrow; ++j){
-        double S=0;
-        for(int k=0;k<*Xncol;++k){
-				  double d=(X(i,k)-Y(j,k));
-          S+=exp(nu[k])*pow(d,2.0);
-				}
-        Cov(i,j) =  exp(*sigma_f - 0.5 * S);
+			double S=0;
+			for(int k=0;k<*Xncol;++k){
+				double d=(X(i,k)-Y(j,k));
+				S+=exp(nu[k])*pow(d,2.0);
 			}
+        Cov(i,j) =  exp(*sigma_f - 0.5 * S);
 		}
+	}
     memcpy(result,Cov.data(),Cov.size() * sizeof(double));
 	}	
 	
