@@ -41,15 +41,14 @@ gp.pca<-function(X,y,K,Xtest){
 gp.plsa<-function(X,y,K,Xtest){
   source("GP.R")
   require("MASS")
-  N<-dim(X)[1]
-  T<-dim(Xtest)[1]
-  D<-dim(X)[2]
-  plsa<-plsa.test(X,Xtest,K,1e2,1e-6)
-  fit<-gp.init(plsa$pxgz,y)
+  n<-dim(X)[1]
+  ntest<-dim(Xtest)[1]
+  d<-dim(X)[2]
+  plsa<-plsa(rbind(X,Xtest),K,1e2,1e-6)
+  fit<-gp.init(plsa$pxgz[1:n,],y)
   fit<-gp.hmc(fit,10000,10,5000)
-  test_pxgz<-matrix(runif(T*K),T,K)
-  pred.train<-gp.pred(fit,plsa$pxgz)$mean
-  pred.test<-gp.pred(fit,plsa$pxgz_test)$mean
+  pred.train<-gp.pred(fit,plsa$pxgz[1:n,])$mean
+  pred.test<-gp.pred(fit,plsa$pxgz[-(1:n),])$mean
   return(list(y_train=pred.train,y_test=pred.test))
 }
 

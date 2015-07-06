@@ -12,6 +12,7 @@ X<-gasoline$NIR[idx,]
 X[X<0]<-0
 y<-gasoline$octane[idx]
 Xtest<-gasoline$NIR[-idx,]
+Xtest[Xtest<0]<-0
 ytest<-gasoline$octane[-idx]
 
 gas.pls <- mvr(y~X,Z,method = "simpls")
@@ -19,7 +20,7 @@ gas.kpls <- plsr(y~X,Z,method = "kernelpls")
 y.pls<-predict(gas.pls,newdata=Xtest,comp=Z)
 y.kpls<-predict(gas.kpls,newdata=Xtest,comp=Z)
 
-pred<-gp.plsa(X,y,Z,Xtest)
+pred<-gp.plsa(X,y,100,Xtest)
 
 rms.gp<-list(train=pca.rmse(y,pred$y_train),test=pca.rmse(ytest,pred$y_test))
 rms.pls<-list(train=pca.rmse(y,gas.pls$fitted.values[,,Z]),test=pca.rmse(ytest,y.pls))
@@ -35,20 +36,20 @@ print(cbind(r2.gp,r2.kpls,r2.pls))
 
 ntest<-length(ytest)
 test.dat <- data.frame(set=rep("test",ntest*3),method = rep(c("GP", "KPLS","PLS"), each=ntest),reference=rep(ytest,3),prediction=rbind(pred$y_test,matrix(y.kpls),matrix(y.pls)))
-#pp<-ggplot(test.dat, aes(x=reference, y=prediction)) + geom_point(shape=1)
-#pp<-pp+geom_smooth(method=lm)+facet_grid(. ~ method)
-#ggsave(file="gasoline_test.pdf",plot=pp,scale=2)
+pp<-ggplot(test.dat, aes(x=reference, y=prediction)) + geom_point(shape=1)
+pp<-pp+geom_smooth(method=lm)+facet_grid(. ~ method)
+ggsave(file="gasoline_test.pdf",plot=pp,scale=2)
 
 ntrain<-length(y)
 train.dat <- data.frame(set=rep("train",ntrain*3),method = rep(c("GP", "KPLS","PLS"), each=ntrain),reference=rep(y,3),prediction=rbind(pred$y_train,matrix(gas.kpls$fitted.values[,,Z]),matrix(gas.pls$fitted.values[,,Z])))
-#pp<-ggplot(train.dat, aes(x=reference, y=prediction)) + geom_point(shape=1)
-#pp<-pp+geom_smooth(method=lm)+facet_grid(. ~ method)
-#ggsave(file="gasoline_train.pdf",plot=pp,scale=2)
+pp<-ggplot(train.dat, aes(x=reference, y=prediction)) + geom_point(shape=1)
+pp<-pp+geom_smooth(method=lm)+facet_grid(. ~ method)
+ggsave(file="gasoline_train.pdf",plot=pp,scale=2)
 
-plot(train.dat$reference,train.dat$prediction,pch=21,col=train.dat$method)
 
-comp<-plsa(X,100,1e2,1e-6)
-plot(X[1,],type="l")
-lines(1:401,comp$pxy[1,])
-pxy<-matrix(rep(0,ntrain*401),nrow=50,ncol=401)
-for (i in 1:length(comp$pz)) pxy<-pxy+comp$pxgz[,i]%*%t(comp$pygz[,i])*comp$pz[i]
+comp<-plsa(rbind(X,Xtest),100,1e2,1e-6)
+pxgz_test<-comp$pxgz[-(1:ntrain),]
+pxy_test<-matrix(rep(0,ntest*401),nrow=ntest,ncol=401)
+for (i in 1:length(comp$pz)) pxy_test<-pxy_test+pxgz_test[,i]%*%t(comp$pygz[,i])*comp$pz[i]
+plot(Xtest[1,])
+lines(1:401,pxy_test[1,],col="red")
