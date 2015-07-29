@@ -20,7 +20,7 @@ print("numerical derivative:")
 print(grad(Linn,gp.getparams(gp)))
 print("exact derivative:")
 print(gp.grad(gp))
-gp.mc<-gp.hmc(gp,niter=10000,leapfrog=10,5000)
+gp.mc<-gp.hmc(gp,niter=10000,leapfrog=3,5000)
 pred.mc<-gp.pred(gp.mc,X)
 rmse<-sum((y-pred.mc$mean)^2)/n
 cat("HMC : ",rmse,"\n")

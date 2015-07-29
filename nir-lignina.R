@@ -75,4 +75,4 @@ test.method<-function(Z=1){
   ggsave(file=paste0("figures/lignina_train_",Z,".pdf"),plot=pp,scale=2)
 }
 
-for (i in (1:3)) test.method(i)
+for (i in (1:20)) test.method(i)
