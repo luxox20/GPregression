@@ -122,7 +122,7 @@ gp.loglike<-function(gp){
 	Fun<-.C("log_likelihood",as.double(Kxx),
         as.integer(nkxx[1]),as.integer(nkxx[2]),
         as.double(gp$ytrain),as.integer(nyt[1]),as.double(gp$sigma_f),as.double(gp$sigma_y),as.double(gp$bias),ll=as.double(ll))
-    ll=Fun$ll+gp.prior(gp)
+        ll=Fun$ll
 	return(as.numeric(ll))	
 }
 

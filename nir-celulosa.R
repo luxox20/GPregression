@@ -35,9 +35,9 @@ rm(files,i,concatenate,concatenate.list,NIR,referencias)
 idx<-c(1:40)
 idxtest<-c(41:58)
 X<-wood$NIR[idx,]
-y<-wood$lig_ref[idx]
+y<-wood$cel_ref[idx]
 Xtest<-wood$NIR[idxtest,]
-ytest<-wood$lig_ref[idxtest]
+ytest<-wood$cel_ref[idxtest]
 
 test.method<-function(Z=1){
   wood.pls <- mvr(y~X,ncomp=Z,method = "simpls", scale=TRUE,validation = "LOO")
@@ -56,23 +56,22 @@ test.method<-function(Z=1){
   r2.gp<-list(train=pca.r2(y,pred$y_train),test=pca.r2.test(y,ytest,pred$y_test))
   r2.pls<-list(train=pca.r2(y,wood.pls$fitted.values[,,Z]),test=pca.r2.test(y,ytest,y.pls))
   r2.kpls<-list(train=pca.r2(y,wood.kpls$fitted.values[,,Z]),test=pca.r2.test(y,ytest,y.kpls))
-  
-  
+  cat("----------------------------------------------------------\n")
+  cat("Z=",Z)
   print(cbind(rms.gp,rms.kpls,rms.pls))
-  
   print(cbind(r2.gp,r2.kpls,r2.pls))
   
   ntest<-length(ytest)
   test.dat <- data.frame(set=rep("test",ntest*3),method = rep(c("GP", "KPLS","PLS"), each=ntest),reference=rep(ytest,3),prediction=rbind(pred$y_test,matrix(y.kpls),matrix(y.pls)))
   pp<-ggplot(test.dat, aes(x=reference, y=prediction)) + geom_point(shape=1)
   pp<-pp+geom_smooth(method=lm)+facet_grid(. ~ method)
-  ggsave(file=paste0("figures/lignina_test_",Z,".pdf"),plot=pp,scale=2)
+  ggsave(file=paste0("figures/celulosa_test_",Z,".pdf"),plot=pp,scale=2)
   
   ntrain<-length(y)
   train.dat <- data.frame(set=rep("train",ntrain*3),method = rep(c("GP", "KPLS","PLS"), each=ntrain),reference=rep(y,3),prediction=rbind(pred$y_train,matrix(wood.kpls$fitted.values[,,Z]),matrix(wood.pls$fitted.values[,,Z])))
   pp<-ggplot(train.dat, aes(x=reference, y=prediction)) + geom_point(shape=1)
   pp<-pp+geom_smooth(method=lm)+facet_grid(. ~ method)
-  ggsave(file=paste0("figures/lignina_train_",Z,".pdf"),plot=pp,scale=2)
+  ggsave(file=paste0("figures/celulosa_train_",Z,".pdf"),plot=pp,scale=2)
 }
 
-for (i in (1:3)) test.method(i)
+for (i in (3:20)) test.method(i)

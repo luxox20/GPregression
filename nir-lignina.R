@@ -57,9 +57,9 @@ test.method<-function(Z=1){
   r2.pls<-list(train=pca.r2(y,wood.pls$fitted.values[,,Z]),test=pca.r2.test(y,ytest,y.pls))
   r2.kpls<-list(train=pca.r2(y,wood.kpls$fitted.values[,,Z]),test=pca.r2.test(y,ytest,y.kpls))
   
-  
+  cat("----------------------------------------------------------\n")
+  cat("Z=",Z)
   print(cbind(rms.gp,rms.kpls,rms.pls))
-  
   print(cbind(r2.gp,r2.kpls,r2.pls))
   
   ntest<-length(ytest)
